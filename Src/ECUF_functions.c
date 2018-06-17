@@ -207,6 +207,10 @@ void dashControl(){
 
 	HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
 
+
+
+
+
 }
 
 
