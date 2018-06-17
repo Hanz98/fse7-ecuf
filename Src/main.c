@@ -152,10 +152,7 @@ int main(void)
   txInit();
   candbInit();
   HAL_CAN_Receive_IT(&hcan1,CAN_FIFO0);
-/*
   HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_1);
-*/
 
   setup();
   /* USER CODE END 2 */
@@ -164,10 +161,14 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
+	  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100);
+	  HAL_Delay(1000);
+	  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 500);
 	  txProcess();
 	  loop();
-  /* USER CODE END WHILE */
+
+
+	  /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
 
@@ -436,9 +437,9 @@ static void MX_TIM3_Init(void)
   TIM_OC_InitTypeDef sConfigOC;
 
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 72;
+  htim3.Init.Prescaler = 24;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 100;
+  htim3.Init.Period = 200;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
