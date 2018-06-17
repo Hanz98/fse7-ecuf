@@ -167,6 +167,7 @@ int main(void)
 	  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100);
 	  HAL_Delay(1000);
 	  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 500);
+	  HAL_Delay(1000);
 	  /* konec testování */
 
 	  txProcess();
