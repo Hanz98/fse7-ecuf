@@ -161,9 +161,14 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
+	  /* jestli chcete testovat zakometujte následující kusy s hal_tim_set_compare a delay */
+	  /* testování pwm */
 	  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100);
 	  HAL_Delay(1000);
 	  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 500);
+	  /* konec testování */
+
 	  txProcess();
 	  loop();
 
