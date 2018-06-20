@@ -140,10 +140,10 @@
 #define PRESS 0
 #define BREAK 0
 #define LPF 0.025
-/*
-enum photoState{LONG, SHORT};
-enum photoState statePhoto = LONG;
-*/
+
+enum photoState {LONG = 1, SHORT = 0};
+enum photoState stateP;
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

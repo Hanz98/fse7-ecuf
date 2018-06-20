@@ -87,8 +87,6 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-extern uint16_t dataGreen[4];
-extern uint16_t dataRed[4];
 
 /* USER CODE END PFP */
 
@@ -100,7 +98,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 		{
 		   adc[i] = buffer[i];  // store the values in adc[]
 		}
-	photo = adc[3]/16.1;
+	photo = rescale(adc[3], 0, 4096, 0, 255);
 
 }
 
@@ -536,7 +534,7 @@ static void MX_TIM3_Init(void)
   }
 
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
+  sConfigOC.Pulse = 50;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)

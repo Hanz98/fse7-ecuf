@@ -9,7 +9,9 @@ extern CAN_HandleTypeDef hcan1;
 extern CAN_HandleTypeDef hcan2;
 
 int32_t value;
+int32_t valueControl = 0;
 uint64_t timer = 0;
+uint64_t timer2 = 0;
 uint64_t led = RED;
 
 uint16_t dataRed[4];
@@ -23,7 +25,7 @@ uint8_t tmp = 0;
 int16_t tmpPhoto = 50;
 uint8_t i = 0;
 
-
+extern enum photoState stateP;
 extern uint16_t photo;
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim3;
@@ -92,20 +94,10 @@ void checkShutdown(ECUF_Status_t* data){
 }
 
 void dashInit(void){
-	dataGreen[0] = 0x0000;
-	dataRed[0] = 0x0000;
-	dataGreen[1] = 0x0000;
-	dataRed[1] = 0x0000;
-	dataGreen[2] = 0x0000;
-	dataRed[2] = 0x0000;
-	dataGreen[3] = 0x0000;
-	dataRed[3] = 0x0000;
-
 	dataGreen[0] = 0xFFFF;
 	dataRed[0] = 0xFFFF;
-
-
 	while(soc != 100){
+
 	if (timer < HAL_GetTick()){
 			timer = HAL_GetTick() + 10;
 			soc++;
@@ -114,6 +106,7 @@ void dashInit(void){
 	if (soc != lastsoc){
 		led = RED;
 		lastsoc = soc;
+		soc = (soc * 2) / 2;
 	shift = (100 - soc)/ 4;
 
 
@@ -128,8 +121,6 @@ void dashInit(void){
 		tmp = ((soc*soc)/10000.0)*100;
 		state += 1;
 		state %= 100;
-		dataGreen[0] = 0xFFFF;
-		dataRed[0] = 0xFFFF;
 
 	HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
 
@@ -166,8 +157,6 @@ void dashInit(void){
 		tmp = ((soc*soc)/10000.0)*100;
 		state += 1;
 		state %= 100;
-		dataGreen[0] = 0xFFFF;
-		dataRed[0] = 0xFFFF;
 
 	HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
 
@@ -279,20 +268,41 @@ void receiveData(void){
 
 
 }
+int32_t rescale(int32_t value, float oldMin, float oldMax, float newMin, float newMax){
+	value = ((newMax - newMin) / (oldMax - oldMin)) * (value - oldMax) + newMax;
+	return value;
+}
 
 void dashBright(void){
 
-	tmpPhoto = tmpPhoto - (0.025 * (tmpPhoto - photo));
-
+	tmpPhoto = tmpPhoto - (0.25 * (tmpPhoto - photo));
 	//tmpPhoto = (tmpPhoto*tmpPhoto*tmpPhoto / 1000000) * 1000;
 
-
 	value = tmpPhoto;
-	value /= 2.6;
+//	value = tmpPhoto;
+//	value = tmpPhoto;
+	value = rescale(value, 0.0, 255.0, 0.0, 100.0);
+
 	value -= 100;
 	value *= -1;
+	value = rescale(value, 0.0, 100.0, 20.0, 95.0);
+/*
+	if (timer2 < HAL_GetTick()){
 
-	//if (statePhoto == LONG)
-		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, LPF);
+		timer2 = HAL_GetTick() + 2000;
+		if (	stateP == LONG){
+		valueControl = value;
+		}
+		stateP = LONG;
+	}
+	else {
+		if (value - 10 > valueControl && value + 10 < valueControl){
+			stateP = SHORT;
+		}
+	}
+*/
+	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, value);
 
 }
+
+
