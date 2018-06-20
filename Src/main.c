@@ -40,6 +40,7 @@
 #include "stm32f1xx_hal.h"
 
 /* USER CODE BEGIN Includes */
+#include <math.h>
 #include "eforce/tx.h"
 #include "can_ECUF.h"
 #include "can_eforce_init.h"
@@ -48,10 +49,12 @@
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
+DMA_HandleTypeDef hdma_adc1;
 
 CAN_HandleTypeDef hcan1;
 CAN_HandleTypeDef hcan2;
 
+SPI_HandleTypeDef hspi1;
 SPI_HandleTypeDef hspi2;
 
 TIM_HandleTypeDef htim1;
@@ -59,10 +62,8 @@ TIM_HandleTypeDef htim3;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-uint32_t a = 0;
-uint16_t data[4];
 uint16_t photo;
-uint16_t other;
+uint32_t adc[9], buffer[9];
 
 CanTxMsgTypeDef canTxMsg1;
 CanRxMsgTypeDef canRxMsg1;
@@ -72,31 +73,35 @@ CanRxMsgTypeDef	canRxMsg2;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_CAN1_Init(void);
 static void MX_CAN2_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_SPI2_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM3_Init(void);
+static void MX_SPI1_Init(void);
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
                                 
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
+extern uint16_t dataGreen[4];
+extern uint16_t dataRed[4];
 
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
-uint16_t adc[50];
-int in = 0;
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
+	for (int i = 0; i < 9; i++)
+		{
+		   adc[i] = buffer[i];  // store the values in adc[]
+		}
+	photo = adc[3]/16.1;
 
-	adc[in] = hadc->Instance->DR;
-	in++;
-	in %= 50;
 }
 
 void HAL_CAN_RxCpltCallback(CAN_HandleTypeDef* hcan){
@@ -136,45 +141,44 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_CAN1_Init();
   MX_CAN2_Init();
   MX_ADC1_Init();
   MX_SPI2_Init();
   MX_TIM1_Init();
   MX_TIM3_Init();
+  MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
 
   HAL_ADC_Start_IT(&hadc1);
-
+  HAL_ADC_Start_DMA (&hadc1, (uint32_t *) buffer, 9);
 
   CAN_eforce(&hcan1,CAN1,&canRxMsg1);
   CAN_eforce(&hcan2,CAN2,&canRxMsg2);
   txInit();
   candbInit();
   HAL_CAN_Receive_IT(&hcan1,CAN_FIFO0);
-  HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start (&htim3, TIM_CHANNEL_1);
 
-  setup();
+
+
+setup();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+		//HAL_GPIO_TogglePin(EN_TT_VCC_GPIO_Port,EN_TT_VCC_Pin);
 
-	  /* jestli chcete testovat zakometujte následující kusy s hal_tim_set_compare a delay */
-	  /* testování pwm */
-	  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100);
-	  HAL_Delay(1000);
-	  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 500);
-	  HAL_Delay(1000);
-	  /* konec testování */
 
 	  txProcess();
 	  loop();
 
 
-	  /* USER CODE END WHILE */
+  /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
 
@@ -261,7 +265,7 @@ static void MX_ADC1_Init(void)
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 5;
+  hadc1.Init.NbrOfConversion = 9;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -313,6 +317,42 @@ static void MX_ADC1_Init(void)
     _Error_Handler(__FILE__, __LINE__);
   }
 
+    /**Configure Regular Channel 
+    */
+  sConfig.Channel = ADC_CHANNEL_14;
+  sConfig.Rank = ADC_REGULAR_RANK_6;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+    /**Configure Regular Channel 
+    */
+  sConfig.Channel = ADC_CHANNEL_15;
+  sConfig.Rank = ADC_REGULAR_RANK_7;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+    /**Configure Regular Channel 
+    */
+  sConfig.Channel = ADC_CHANNEL_8;
+  sConfig.Rank = ADC_REGULAR_RANK_8;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+    /**Configure Regular Channel 
+    */
+  sConfig.Channel = ADC_CHANNEL_9;
+  sConfig.Rank = ADC_REGULAR_RANK_9;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
 }
 
 /* CAN1 init function */
@@ -355,6 +395,30 @@ static void MX_CAN2_Init(void)
   hcan2.Init.RFLM = DISABLE;
   hcan2.Init.TXFP = DISABLE;
   if (HAL_CAN_Init(&hcan2) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
+/* SPI1 init function */
+static void MX_SPI1_Init(void)
+{
+
+  /* SPI1 parameter configuration*/
+  hspi1.Instance = SPI1;
+  hspi1.Init.Mode = SPI_MODE_MASTER;
+  hspi1.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi1.Init.DataSize = SPI_DATASIZE_16BIT;
+  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi1.Init.NSS = SPI_NSS_SOFT;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
+  hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
+  hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  hspi1.Init.CRCPolynomial = 10;
+  if (HAL_SPI_Init(&hspi1) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
@@ -443,9 +507,9 @@ static void MX_TIM3_Init(void)
   TIM_OC_InitTypeDef sConfigOC;
 
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 24;
+  htim3.Init.Prescaler = 71;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 200;
+  htim3.Init.Period = 99;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
@@ -484,6 +548,21 @@ static void MX_TIM3_Init(void)
 
 }
 
+/** 
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void) 
+{
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Channel1_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
+
+}
+
 /** Configure pins as 
         * Analog 
         * Input 
@@ -504,7 +583,8 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOE, DASH_STROBE_Pin|EN_DASH_VCC_Pin|EN_DLTG_VCC_Pin|EN_I_SENSE_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOE, DASH_STROBE_Pin|EN_DASH_VCC_Pin|EN_DLTG_VCC_Pin|EN_I_SENSE_Pin 
+                          |SEL_0_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, ECUS_DTLG_FRST_Pin|EN_ECUS_VCC_Pin, GPIO_PIN_RESET);
@@ -513,11 +593,13 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOB, EN_LED_SDBC_Pin|EN_TT_VCC_Pin|CS_Pt1000_R_Pin|CS_Pt1000_L_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, EN_ECUP_VCC_Pin|EN_FAN_BAR_VCC_Pin|ECUP_FAN_FRST_Pin|DASH_ECUG_FRST_Pin 
-                          |EN_ECUG_VCC_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOD, EN_ECUP_VCC_Pin|EN_FAN_BAR_VCC_Pin|ECUP_FAN_FRST_Pin|SEL_1_Pin 
+                          |DASH_ECUG_FRST_Pin|EN_ECUG_VCC_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : DASH_STROBE_Pin EN_DASH_VCC_Pin EN_DLTG_VCC_Pin EN_I_SENSE_Pin */
-  GPIO_InitStruct.Pin = DASH_STROBE_Pin|EN_DASH_VCC_Pin|EN_DLTG_VCC_Pin|EN_I_SENSE_Pin;
+  /*Configure GPIO pins : DASH_STROBE_Pin EN_DASH_VCC_Pin EN_DLTG_VCC_Pin EN_I_SENSE_Pin 
+                           SEL_0_Pin */
+  GPIO_InitStruct.Pin = DASH_STROBE_Pin|EN_DASH_VCC_Pin|EN_DLTG_VCC_Pin|EN_I_SENSE_Pin 
+                          |SEL_0_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
@@ -542,10 +624,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : EN_ECUP_VCC_Pin EN_FAN_BAR_VCC_Pin ECUP_FAN_FRST_Pin DASH_ECUG_FRST_Pin 
-                           EN_ECUG_VCC_Pin */
-  GPIO_InitStruct.Pin = EN_ECUP_VCC_Pin|EN_FAN_BAR_VCC_Pin|ECUP_FAN_FRST_Pin|DASH_ECUG_FRST_Pin 
-                          |EN_ECUG_VCC_Pin;
+  /*Configure GPIO pins : EN_ECUP_VCC_Pin EN_FAN_BAR_VCC_Pin ECUP_FAN_FRST_Pin SEL_1_Pin 
+                           DASH_ECUG_FRST_Pin EN_ECUG_VCC_Pin */
+  GPIO_InitStruct.Pin = EN_ECUP_VCC_Pin|EN_FAN_BAR_VCC_Pin|ECUP_FAN_FRST_Pin|SEL_1_Pin 
+                          |DASH_ECUG_FRST_Pin|EN_ECUG_VCC_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);

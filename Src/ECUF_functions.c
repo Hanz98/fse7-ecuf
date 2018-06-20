@@ -8,15 +8,25 @@ extern SPI_HandleTypeDef hspi2;
 extern CAN_HandleTypeDef hcan1;
 extern CAN_HandleTypeDef hcan2;
 
+int32_t value;
+uint64_t timer = 0;
+uint64_t led = RED;
+
 uint16_t dataRed[4];
 uint16_t dataGreen[4];
 uint16_t state = 0;
 uint16_t soc = 0;
 uint16_t lastsoc = 10;
-uint64_t timer = 0;
-uint64_t led = RED;
+
 uint8_t shift = 0;
 uint8_t tmp = 0;
+int16_t tmpPhoto = 50;
+uint8_t i = 0;
+
+
+extern uint16_t photo;
+extern TIM_HandleTypeDef htim1;
+extern TIM_HandleTypeDef htim3;
 
 extern ECUF_Status_t statusFront;
 extern ECUF_STW_t steering;
@@ -39,7 +49,6 @@ void other(void){
 
 }
 
-
 void checkDash(ECUF_Dashboard_t* data){
 	if (HAL_GPIO_ReadPin(TSON_GPIO_Port,TSON_Pin) == PRESS)
 		data->TSON = 1;
@@ -61,6 +70,8 @@ void checkDash(ECUF_Dashboard_t* data){
 		data->SW3 = 1;
 	else
 		data->SW3 = 0;
+
+
 }
 
 void checkShutdown(ECUF_Status_t* data){
@@ -80,19 +91,23 @@ void checkShutdown(ECUF_Status_t* data){
 
 }
 
-
 void dashInit(void){
+	dataGreen[0] = 0x0000;
+	dataRed[0] = 0x0000;
+	dataGreen[1] = 0x0000;
+	dataRed[1] = 0x0000;
+	dataGreen[2] = 0x0000;
+	dataRed[2] = 0x0000;
+	dataGreen[3] = 0x0000;
+	dataRed[3] = 0x0000;
 
 	dataGreen[0] = 0xFFFF;
 	dataRed[0] = 0xFFFF;
 
-	HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
-	HAL_SPI_Transmit(&hspi2, (uint8_t*)dataRed, 4, 5);
-	HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
 
 	while(soc != 100){
 	if (timer < HAL_GetTick()){
-			timer = HAL_GetTick() + 5;
+			timer = HAL_GetTick() + 10;
 			soc++;
 	}
 
@@ -113,6 +128,8 @@ void dashInit(void){
 		tmp = ((soc*soc)/10000.0)*100;
 		state += 1;
 		state %= 100;
+		dataGreen[0] = 0xFFFF;
+		dataRed[0] = 0xFFFF;
 
 	HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
 
@@ -126,7 +143,7 @@ void dashInit(void){
 
 	while(soc != 0){
 	if (timer < HAL_GetTick()){
-			timer = HAL_GetTick() + 5;
+			timer = HAL_GetTick() + 10;
 
 			soc--;
 
@@ -149,6 +166,8 @@ void dashInit(void){
 		tmp = ((soc*soc)/10000.0)*100;
 		state += 1;
 		state %= 100;
+		dataGreen[0] = 0xFFFF;
+		dataRed[0] = 0xFFFF;
 
 	HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
 
@@ -160,6 +179,7 @@ void dashInit(void){
 	HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
 
 	}
+	soc = 50;
 }
 
 void indicatorControl(){
@@ -172,9 +192,13 @@ void indicatorControl(){
 		dataRed[0] &= 0x03FF;
 
 	}
+
 }
+
 void barControl(){
-	soc = estimationA.SOC/2;
+	//soc = estimationA.SOC/2;
+
+
 	if (soc != lastsoc){
 		led = RED;
 		lastsoc = soc;
@@ -195,7 +219,6 @@ void barControl(){
 
 }
 
-
 void dashControl(){
 	barControl();
 	indicatorControl();
@@ -212,7 +235,6 @@ void dashControl(){
 
 
 }
-
 
 void sendData(void){
 
@@ -255,5 +277,22 @@ void receiveData(void){
 	  if(ECUA_get_Estimation(&estimationA) & CAN_MSG_PENDING){
 	  }
 
+
+}
+
+void dashBright(void){
+
+	tmpPhoto = tmpPhoto - (0.025 * (tmpPhoto - photo));
+
+	//tmpPhoto = (tmpPhoto*tmpPhoto*tmpPhoto / 1000000) * 1000;
+
+
+	value = tmpPhoto;
+	value /= 2.6;
+	value -= 100;
+	value *= -1;
+
+	//if (statePhoto == LONG)
+		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, LPF);
 
 }

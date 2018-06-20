@@ -40,6 +40,7 @@ long timer1 = 0;
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern DMA_HandleTypeDef hdma_adc1;
 extern ADC_HandleTypeDef hadc1;
 extern CAN_HandleTypeDef hcan1;
 extern CAN_HandleTypeDef hcan2;
@@ -187,6 +188,9 @@ void SysTick_Handler(void)
   timer1++;
   if (timer1 >= 500){
 	  timer1 = 0;
+	 // HAL_GPIO_TogglePin(SEL_0_GPIO_Port,SEL_0_Pin);
+	 // HAL_GPIO_TogglePin(SEL_1_GPIO_Port,SEL_1_Pin);
+
 	  if (HAL_GPIO_ReadPin(SDBC_GPIO_Port, SDBC_Pin) != PRESS){
 		  HAL_GPIO_TogglePin(EN_LED_SDBC_GPIO_Port,EN_LED_SDBC_Pin);
 
@@ -207,6 +211,20 @@ void SysTick_Handler(void)
 /* For the available peripheral interrupt handler names,                      */
 /* please refer to the startup file (startup_stm32f1xx.s).                    */
 /******************************************************************************/
+
+/**
+* @brief This function handles DMA1 channel1 global interrupt.
+*/
+void DMA1_Channel1_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Channel1_IRQn 0 */
+
+  /* USER CODE END DMA1_Channel1_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_adc1);
+  /* USER CODE BEGIN DMA1_Channel1_IRQn 1 */
+
+  /* USER CODE END DMA1_Channel1_IRQn 1 */
+}
 
 /**
 * @brief This function handles ADC1 and ADC2 global interrupts.
@@ -284,15 +302,6 @@ void CAN1_SCE_IRQHandler(void)
 void TIM1_UP_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM1_UP_IRQn 0 */
-	static uint32_t counter = 0;
-
-	if (counter >= 500)
-
-	{
-		    	HAL_GPIO_TogglePin(EN_TT_VCC_GPIO_Port, EN_TT_VCC_Pin);
-	        	counter = 0;
-		}
-	 counter++;
   /* USER CODE END TIM1_UP_IRQn 0 */
   HAL_TIM_IRQHandler(&htim1);
   /* USER CODE BEGIN TIM1_UP_IRQn 1 */

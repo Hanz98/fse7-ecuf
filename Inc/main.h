@@ -57,6 +57,8 @@
 #define EN_DLTG_VCC_GPIO_Port GPIOE
 #define EN_I_SENSE_Pin GPIO_PIN_5
 #define EN_I_SENSE_GPIO_Port GPIOE
+#define SEL_0_Pin GPIO_PIN_6
+#define SEL_0_GPIO_Port GPIOE
 #define ECUS_DTLG_FRST_Pin GPIO_PIN_2
 #define ECUS_DTLG_FRST_GPIO_Port GPIOC
 #define EN_ECUS_VCC_Pin GPIO_PIN_3
@@ -93,6 +95,8 @@
 #define EN_FAN_BAR_VCC_GPIO_Port GPIOD
 #define ECUP_FAN_FRST_Pin GPIO_PIN_11
 #define ECUP_FAN_FRST_GPIO_Port GPIOD
+#define SEL_1_Pin GPIO_PIN_14
+#define SEL_1_GPIO_Port GPIOD
 #define DASH_ECUG_FRST_Pin GPIO_PIN_2
 #define DASH_ECUG_FRST_GPIO_Port GPIOD
 #define EN_ECUG_VCC_Pin GPIO_PIN_3
@@ -135,6 +139,11 @@
 #define IMPLAUSILITY 0x0001
 #define PRESS 0
 #define BREAK 0
+#define LPF 0.025
+/*
+enum photoState{LONG, SHORT};
+enum photoState statePhoto = LONG;
+*/
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
