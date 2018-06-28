@@ -43,6 +43,7 @@ int start = 0;
 int time1 = 0;
 int validAt = 0;
 int dataOut;
+/*
 void updatePwm(struct pwm* pwm, int input, uint32_t time){
 	if (input){
 		start = time;
@@ -54,6 +55,7 @@ void updatePwm(struct pwm* pwm, int input, uint32_t time){
 	}
 
 }
+*/
 long timer1 = 0;
 /* USER CODE END 0 */
 
@@ -320,13 +322,12 @@ void CAN1_SCE_IRQHandler(void)
 void EXTI9_5_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI9_5_IRQn 0 */
-	int t = TIM1->CNT;
+	//int t = TIM1->CNT;
 
-		// PA5 - Acc1
 
 	if (__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_9)) {
 			__HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_9);
-			updatePwm(&timer, GPIOE->IDR & GPIO_PIN_9, t);
+	//		updatePwm(&timer, GPIOE->IDR & GPIO_PIN_9, t);
 		}
 
   /* USER CODE END EXTI9_5_IRQn 0 */
