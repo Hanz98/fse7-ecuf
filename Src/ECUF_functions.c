@@ -17,7 +17,6 @@ uint64_t timer = 0;
 uint64_t timer2 = 0;
 uint64_t led = RED;
 
-uint16_t tempor[8];
 uint16_t dataRed[4];
 uint16_t dataGreen[4];
 uint16_t brakeTempL[2];
@@ -44,7 +43,7 @@ extern ECUF_DISSusp_t disSup;
 extern ECUF_Dashboard_t dashBoard;
 extern ECUF_TEMPSuspF_t temp;
 
-extern ECUF_REQCalibSTW_t calibration;
+//extern ECUF_REQCalibSTW_t calibration;
 
 extern ECUA_Status_t statusA;
 extern ECUB_Status_t statusBack;
@@ -52,12 +51,6 @@ extern VDCU_Status_t statusVdcu;
 extern ECUP_Status_t statusP;
 extern ECUA_Estimation_t estimationA;
 
-void other(void){
-
-	HAL_GPIO_WritePin(ECUS_DTLG_FRST_GPIO_Port, ECUS_DTLG_FRST_Pin,GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(ECUP_FAN_FRST_GPIO_Port, ECUP_FAN_FRST_Pin,GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(DASH_ECUG_FRST_GPIO_Port, DASH_ECUG_FRST_Pin,GPIO_PIN_RESET);
-}
 
 void checkDash(ECUF_Dashboard_t* data){
 	if (HAL_GPIO_ReadPin(TSON_GPIO_Port,TSON_Pin) == PRESS)
@@ -99,11 +92,63 @@ void checkShutdown(ECUF_Status_t* data){
 	else
 		data->SDC_FWIL = 0;
 
-}
 
+}
 void dashInit(void){
-	dataGreen[0] = 0xFFFF;
-	dataRed[0] = 0xFFFF;
+
+		HAL_Delay(100);
+		dataRed[0] += STABILIZATION;
+		dataGreen[0] += STABILIZATION;
+		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
+			HAL_SPI_Transmit(&hspi2, (uint8_t*)dataGreen, 4, 5);
+		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
+
+		HAL_Delay(100);
+		dataRed[0] += TRACTION;
+		dataGreen[0] += TRACTION;
+		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
+			HAL_SPI_Transmit(&hspi2, (uint8_t*)dataGreen, 4, 5);
+		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
+
+		HAL_Delay(100);
+		dataRed[0] += IMPLAUSILITY;
+		dataGreen[0] += IMPLAUSILITY;
+		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
+			HAL_SPI_Transmit(&hspi2, (uint8_t*)dataGreen, 4, 5);
+		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
+
+		HAL_Delay(100);
+		timer = HAL_GetTick() + 10;
+		dataRed[0] += EFORCE;
+		dataGreen[0] += EFORCE;
+		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
+			HAL_SPI_Transmit(&hspi2, (uint8_t*)dataGreen, 4, 5);
+		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
+
+		HAL_Delay(100);
+		timer = HAL_GetTick() + 10;
+		dataRed[0] += TEMP_ER;
+		dataGreen[0] += TEMP_ER;
+		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
+			HAL_SPI_Transmit(&hspi2, (uint8_t*)dataGreen, 4, 5);
+		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
+
+		HAL_Delay(100);
+		dataRed[0] += LW_ER;
+		dataGreen[0] += LW_ER;
+		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
+			HAL_SPI_Transmit(&hspi2, (uint8_t*)dataGreen, 4, 5);
+		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
+
+
+		HAL_Delay(100);
+		dataRed[0] += CAN_ER;
+		dataGreen[0] += CAN_ER;
+		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
+			HAL_SPI_Transmit(&hspi2, (uint8_t*)dataGreen, 4, 5);
+		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
+
+
 	while(soc != 100){
 
 	if (timer < HAL_GetTick()){
@@ -176,13 +221,16 @@ void dashInit(void){
 	HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
 
 	}
+	dataGreen[0] = 0x0000;
+	dataRed[0] = 0x0000;
 	soc = 50;
 }
 
 void indicatorControl(){
+
 	if (statusBack.CarState < 2 ){
-		dataGreen[0] &= EFORCE;
-		dataRed[0] &= EFORCE;
+		dataGreen[0] |= EFORCE;
+		dataRed[0] |= EFORCE;
 	}
 	else {
 		dataGreen[0] &= RE_EFORCE;
@@ -229,20 +277,20 @@ void indicatorControl(){
 		dataGreen[0] &= RE_TRACTION;
 		dataRed[0] &= RE_TRACTION;
 	}
-	if (statusBack.CarState < 2 ){
-		dataGreen[0] &= IMPLAUSILITY;
-		dataRed[0] &= IMPLAUSILITY;
+	if (statusP.APPS_Plausible){
+		dataGreen[0] |= IMPLAUSILITY;
+		dataRed[0] |= IMPLAUSILITY;
 	}
 	else {
-		dataGreen[0] &= IMPLAUSILITY;
-		dataRed[0] &= IMPLAUSILITY;
+		dataGreen[0] &= RE_IMPLAUSILITY;
+		dataRed[0] &= RE_IMPLAUSILITY;
 	}
-	 */
 
+	 */
 }
 
 void barControl(){
-	//soc = estimationA.SOC/2;
+//	soc = estimationA.SOC/2;
 
 
 	if (soc != lastsoc){
@@ -341,14 +389,14 @@ void breakTemp(){
 
 	if (!HAL_GPIO_ReadPin(DRDY_Pt1000_R_GPIO_Port,DRDY_Pt1000_R_Pin)){
 			HAL_GPIO_WritePin(CS_Pt1000_R_GPIO_Port,CS_Pt1000_R_Pin,GPIO_PIN_RESET);
-			HAL_SPI_Transmit(&hspi1, 0x01, 1, 60);
+			HAL_SPI_Transmit(&hspi1, (uint8_t*)0x01, 1, 60);
 
 			for (int x = 0; x < 2; x++ ){
-				HAL_SPI_Receive	(&hspi1,(uint8_t*)&tempor[x],1, 5);
+				HAL_SPI_Receive	(&hspi1,(uint8_t*)&brakeTempR[x],1, 5);
 			}
 			HAL_GPIO_WritePin(CS_Pt1000_R_GPIO_Port,CS_Pt1000_R_Pin,GPIO_PIN_SET);
 
-			temperature = tempor[1] * 256 + tempor[0];
+			temperature = brakeTempR[1] * 256 + brakeTempR[0];
 			temperature = temperature / 32 - 256;
 
 			temp.BrakeCal_FR = temperature / 2;
@@ -360,15 +408,16 @@ void breakTemp(){
 
 	if (!HAL_GPIO_ReadPin(DRDY_Pt1000_L_GPIO_Port,DRDY_Pt1000_L_Pin)){
 			HAL_GPIO_WritePin(CS_Pt1000_L_GPIO_Port,CS_Pt1000_L_Pin,GPIO_PIN_RESET);
-			HAL_SPI_Transmit(&hspi1, 0x01, 1, 60);
+			HAL_SPI_Transmit(&hspi1, (uint8_t*)0x01, 1, 60);
 
 			for (int x = 0; x < 2; x++ ){
-				HAL_SPI_Receive	(&hspi1,(uint8_t*)&tempor[x],1, 5);
+				HAL_SPI_Receive	(&hspi1,(uint8_t*)&brakeTempL[x],1, 5);
 			}
 			HAL_GPIO_WritePin(CS_Pt1000_L_GPIO_Port,CS_Pt1000_L_Pin,GPIO_PIN_SET);
 
-			temperature = tempor[1] * 256 + tempor[0];
+			temperature = brakeTempL[1] * 256 + brakeTempL[0];
 			temperature = temperature / 32 - 256;
+
 
 			temp.BrakeCal_FL = temperature / 2;
 	}
@@ -430,5 +479,4 @@ void fanCheck(){
 	}
 
 }
-
 

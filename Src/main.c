@@ -48,6 +48,7 @@ void SystemClock_Config(void);
 
 /* USER CODE BEGIN 0 */
 
+
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
 	for (int i = 0; i < 9; i++)
@@ -116,7 +117,7 @@ int main(void)
 
   HAL_CAN_Receive_IT(&hcan1,CAN_FIFO0);
   HAL_TIM_PWM_Start (&htim3, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start (&htim1, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start_IT (&htim1, TIM_CHANNEL_1);
 
   setup();
 
