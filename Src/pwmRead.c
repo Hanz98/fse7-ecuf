@@ -38,7 +38,7 @@ int Get_STRW_Calibrated_Angle(){
 static uint32_t Flash_Address = 0x080E0000;
 
 void SaveCalibration(){
-	Flash_EraseSector(FLASH_SECTOR_11); // nevim co se tam má dát
+	Flash_ErasePage(Flash_Address);
 	Flash_Write((uint8_t*)Flash_Address,&Calibration,sizeof(Calibration));
 }
 
