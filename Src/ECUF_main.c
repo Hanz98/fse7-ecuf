@@ -64,6 +64,7 @@ void setup(){
 
 void loop(){
 	/* temp */
+	/*
 	if (HAL_GPIO_ReadPin(SW2_GPIO_Port,SW2_Pin) == PRESS ){
 		if (timer < HAL_GetTick()){
 
@@ -103,7 +104,7 @@ void loop(){
 		}
 
 	}
-
+	*/
 	receiveData();
 	checkDash(&dashBoard);
 	checkShutdown(&statusFront);

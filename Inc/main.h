@@ -45,6 +45,8 @@
 #define VCC_GPIO_Port GPIOA
 #define SWS_SIG_IN_Pin GPIO_PIN_9
 #define SWS_SIG_IN_GPIO_Port GPIOE
+#define SWS_ERR_IN_Pin GPIO_PIN_10
+#define SWS_ERR_IN_GPIO_Port GPIOE
 #define TSON_Pin GPIO_PIN_12
 #define TSON_GPIO_Port GPIOE
 #define SDBC_Pin GPIO_PIN_13

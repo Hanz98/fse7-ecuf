@@ -68,9 +68,9 @@ void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PEPin PEPin PEPin PEPin 
-                           PEPin */
-  GPIO_InitStruct.Pin = TSON_Pin|SDBC_Pin|CIS_Pin|INERTIA_Pin 
-                          |DRDY_Pt1000_L_Pin;
+                           PEPin PEPin */
+  GPIO_InitStruct.Pin = SWS_ERR_IN_Pin|TSON_Pin|SDBC_Pin|CIS_Pin 
+                          |INERTIA_Pin|DRDY_Pt1000_L_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
