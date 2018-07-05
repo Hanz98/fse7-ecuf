@@ -2,6 +2,9 @@
 
 //extern TIM_HandleTypeDef htim1;
 
+uint32_t PWM_Period;
+uint32_t STRW_Sensor_Reading;
+uint32_t STW_last_interrupt;
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {

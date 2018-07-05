@@ -71,14 +71,5 @@ int CAN_eforce(CAN_HandleTypeDef *hcan,CAN_TypeDef *Instance,CanRxMsgTypeDef*can
         return 0;
     }
 
-    // enable interrupts
-
-    HAL_NVIC_EnableIRQ(CAN1_SCE_IRQn);
-    HAL_NVIC_SetPriority(CAN1_SCE_IRQn, 4, 0);
-
-    HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
-    HAL_NVIC_SetPriority(CAN1_RX0_IRQn, 3, 0);
-
-
     return 1;
 }

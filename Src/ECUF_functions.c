@@ -483,7 +483,7 @@ void fanCheck(){
 
 void STRWRead(){
 	steering.Angle = Get_STRW_Calibrated_Angle() * 0.1;
-	if (HAL_GPIO_ReadPin((SWS_ERR_IN_GPIO_Port,SWS_ERR_IN_Pin))){
+	if (HAL_GPIO_ReadPin(SWS_ERR_IN_GPIO_Port,SWS_ERR_IN_Pin)){
 		steering.FT_STW = 1;
 	}
 	else

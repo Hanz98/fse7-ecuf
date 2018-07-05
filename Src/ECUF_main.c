@@ -2,10 +2,8 @@
 #include "stm32f1xx_hal.h"
 #include <math.h>
 
-#include "eforce/tx.h"
 #include "can_ECUF.h"
 #include "can_eforce_init.h"
-#include "eforce/can.h"
 #include "ECUF_functions.h"
 
 

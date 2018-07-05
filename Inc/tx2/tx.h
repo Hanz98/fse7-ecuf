@@ -31,12 +31,12 @@ enum {
 };
 
 void txInit(void);
-int txReceiveCANMessage(CAN_ID_t id, const void* data, size_t length);
+int txReceiveCANMessage(int bus, CAN_ID_t id, const void* data, size_t length);
 void txProcess(void);
 
 /* implemented by library user */
 uint32_t txGetTimeMillis(void);
-int txHandleCANMessage(uint32_t timestamp, CAN_ID_t id, const void* data, size_t length);
+int txHandleCANMessage(uint32_t timestamp, int bus, CAN_ID_t id, const void* data, size_t length);
 int txSendCANMessage(int bus, CAN_ID_t id, const void* data, size_t length);
 
 #ifdef __cplusplus

@@ -36,6 +36,8 @@
 #include "stm32f1xx_it.h"
 
 /* USER CODE BEGIN 0 */
+#include "can_ECUF.h"
+
 #include "pwm.c"
 extern TIM_HandleTypeDef htim3;
 
@@ -267,13 +269,57 @@ void ADC1_2_IRQHandler(void)
   /* USER CODE END ADC1_2_IRQn 1 */
 }
 
+static void CAN_HandleTXIRQ(CAN_TypeDef* instance) {
+	for (int i = 0; i < 3; i++) {
+		if (instance->TSR & (CAN_TSR_RQCP0 << 16*i) ) {
+			instance->TSR |= (CAN_TSR_RQCP0 << 16*i);
+		}
+	}
+}
+
+static void CAN_HandleRX0IRQ(CAN_TypeDef* instance, int bus) {
+	/* Message received in mailbox 0 */
+	if (instance->RF0R & CAN_RF0R_FMP0) {
+		/* Decode ID & length */
+		uint32_t sid = (uint32_t)0x000007FF & (instance->sFIFOMailBox[0].RIR >> 21);
+		int length = instance->sFIFOMailBox[0].RDTR & 0x0f;
+
+		union
+		{
+			uint32_t regs[2];
+			uint8_t bytes[8];
+		} data;
+
+		data.regs[0] = instance->sFIFOMailBox[0].RDLR;
+		data.regs[1] = instance->sFIFOMailBox[0].RDHR;
+
+		/* Call Tx's CAN dispatcher */
+		if (txReceiveCANMessage(bus, STD_ID(sid), data.bytes, length) < 0)
+		{
+			//status_post(STATUS_ERR_CAN_RINGBUF);
+			/* Error: Input buffer overflow */
+		}
+
+		/* Release mailbox to receive further messages */
+		instance->RF0R |= CAN_RF0R_RFOM0;
+
+		//status_post(STATUS_OK_CAN_RECV);
+		/* TODO: Blink a LED */
+	}
+}
+
+static void CAN_HandleSCEIRQ(CAN_TypeDef* instance) {
+	instance->MSR |= CAN_MSR_ERRI;
+}
+
 /**
 * @brief This function handles CAN1 TX interrupt.
 */
 void CAN1_TX_IRQHandler(void)
 {
   /* USER CODE BEGIN CAN1_TX_IRQn 0 */
-
+	CAN_HandleTXIRQ(CAN1);
+	return;
   /* USER CODE END CAN1_TX_IRQn 0 */
   HAL_CAN_IRQHandler(&hcan1);
   /* USER CODE BEGIN CAN1_TX_IRQn 1 */
@@ -281,13 +327,16 @@ void CAN1_TX_IRQHandler(void)
   /* USER CODE END CAN1_TX_IRQn 1 */
 }
 
+
+
 /**
 * @brief This function handles CAN1 RX0 interrupt.
 */
 void CAN1_RX0_IRQHandler(void)
 {
   /* USER CODE BEGIN CAN1_RX0_IRQn 0 */
-
+	CAN_HandleRX0IRQ(CAN1, bus_CAN1_powertrain);
+	return;
   /* USER CODE END CAN1_RX0_IRQn 0 */
   HAL_CAN_IRQHandler(&hcan1);
   /* USER CODE BEGIN CAN1_RX0_IRQn 1 */
@@ -315,7 +364,8 @@ void CAN1_RX1_IRQHandler(void)
 void CAN1_SCE_IRQHandler(void)
 {
   /* USER CODE BEGIN CAN1_SCE_IRQn 0 */
-
+	CAN_HandleSCEIRQ(CAN1);
+	return;
   /* USER CODE END CAN1_SCE_IRQn 0 */
   HAL_CAN_IRQHandler(&hcan1);
   /* USER CODE BEGIN CAN1_SCE_IRQn 1 */
@@ -384,7 +434,8 @@ void TIM1_CC_IRQHandler(void)
 void CAN2_TX_IRQHandler(void)
 {
   /* USER CODE BEGIN CAN2_TX_IRQn 0 */
-
+	CAN_HandleTXIRQ(CAN2);
+	return;
   /* USER CODE END CAN2_TX_IRQn 0 */
   HAL_CAN_IRQHandler(&hcan2);
   /* USER CODE BEGIN CAN2_TX_IRQn 1 */
@@ -398,7 +449,8 @@ void CAN2_TX_IRQHandler(void)
 void CAN2_RX0_IRQHandler(void)
 {
   /* USER CODE BEGIN CAN2_RX0_IRQn 0 */
-
+	CAN_HandleRX0IRQ(CAN2, bus_CAN2_aux);
+	return;
   /* USER CODE END CAN2_RX0_IRQn 0 */
   HAL_CAN_IRQHandler(&hcan2);
   /* USER CODE BEGIN CAN2_RX0_IRQn 1 */
@@ -426,7 +478,8 @@ void CAN2_RX1_IRQHandler(void)
 void CAN2_SCE_IRQHandler(void)
 {
   /* USER CODE BEGIN CAN2_SCE_IRQn 0 */
-
+	CAN_HandleSCEIRQ(CAN2);
+	return;
   /* USER CODE END CAN2_SCE_IRQn 0 */
   HAL_CAN_IRQHandler(&hcan2);
   /* USER CODE BEGIN CAN2_SCE_IRQn 1 */

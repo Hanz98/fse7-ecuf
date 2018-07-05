@@ -1,6 +1,6 @@
 
-#include <eforce/can.h>
-#include <eforce/ringbuf.h>
+#include <tx2/can.h>
+#include <tx2/ringbuf.h>
 
 #ifndef TX_RECV_BUFFER_SIZE
 enum { TX_RECV_BUFFER_SIZE = 256 };
@@ -11,7 +11,7 @@ static ringbuf_t recv_rb;
 
 static volatile int flags;
 
-extern void candbHandleMessage(uint32_t timestamp, CAN_ID_t id, const uint8_t* payload, size_t payload_length);
+extern void candbHandleMessage(int bus, uint32_t timestamp, CAN_ID_t id, const uint8_t* payload, size_t payload_length);
 
 static void set_flag(int flag) {
 	// TODO: must be atomic
@@ -27,7 +27,7 @@ void txInit(void) {
 	recv_rb.writepos = 0;
 }
 
-int txReceiveCANMessage(CAN_ID_t id, const void* data, size_t length) {
+int txReceiveCANMessage(int bus, CAN_ID_t id, const void* data, size_t length) {
 	const size_t required_size = sizeof(struct CAN_msg_header) + length;
 
 	if (!ringbufCanWrite(&recv_rb, required_size)) {
@@ -35,7 +35,7 @@ int txReceiveCANMessage(CAN_ID_t id, const void* data, size_t length) {
 		return -TX_RECV_BUFFER_OVERFLOW;
 	}
 
-	struct CAN_msg_header hdr = {txGetTimeMillis(), id, length};
+	struct CAN_msg_header hdr = {txGetTimeMillis(), bus, id, length};
 	ringbufWriteUnchecked(&recv_rb, (const uint8_t*) &hdr, sizeof(hdr));
 	ringbufWriteUnchecked(&recv_rb, (const uint8_t*) data, length);
 
@@ -57,15 +57,12 @@ void txProcess(void) {
 			recv_rb.readpos = read_pos;
 
 			// Call the user filter
-			if (txHandleCANMessage(hdr.timestamp, hdr.id, msg_data, hdr.length) < 0)
+			if (txHandleCANMessage(hdr.timestamp, hdr.bus, hdr.id, msg_data, hdr.length) < 0)
 				continue;
 
 #if TX_WITH_CANDB
 			// Call the CANdb dispatcher, if enabled.
-			candbHandleMessage(hdr.timestamp, hdr.id, msg_data, hdr.length);
-#endif
-
-#if TX_WITH_INTROSPECT
+			candbHandleMessage(hdr.timestamp, hdr.bus, hdr.id, msg_data, hdr.length);
 #endif
 		}
 	}

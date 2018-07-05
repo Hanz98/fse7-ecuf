@@ -18,10 +18,9 @@
 /* USER CODE BEGIN Includes */
 #include <math.h>
 #include "pwm.c"
-#include "eforce/tx.h"
+
 #include "can_ECUF.h"
 #include "can_eforce_init.h"
-#include "eforce/can.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -57,12 +56,6 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 		}
 	photo = rescale(adc[3], 0, 4096, 0, 255);
 
-}
-
-void HAL_CAN_RxCpltCallback(CAN_HandleTypeDef* hcan){
-	txReceiveCANMessage(canRxMsg1.StdId, &canRxMsg1.Data,canRxMsg1.DLC);
-	HAL_CAN_Receive_IT(hcan, CAN_FIFO0);
-	__HAL_CAN_FIFO_RELEASE(hcan,CAN_FIFO0);
 }
 
 /* USER CODE END 0 */

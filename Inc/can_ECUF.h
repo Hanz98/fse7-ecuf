@@ -39,17 +39,6 @@ enum ECUA_StateAMS {
     ECUA_StateAMS_SHIT = 1,
 };
 
-enum ECUF_CAL_STWIndex {
-    /* None */
-    ECUF_CAL_STWIndex_None = 0,
-    /* Left position (output is positive) */
-    ECUF_CAL_STWIndex_STWLeft = 1,
-    /* Center position */
-    ECUF_CAL_STWIndex_STWCenter = 2,
-    /* Right position (output is negative) */
-    ECUF_CAL_STWIndex_STWRight = 3,
-};
-
 enum VDCU_CAL_DisIndex {
     /* None */
     VDCU_CAL_DisIndex_None = 0,
@@ -64,54 +53,64 @@ enum VDCU_CAL_DisIndex {
 };
 
 enum VDCU_VDCU_Param {
-    /* Torque gain (0-128) */
-    VDCU_VDCU_Param_TorqueGain = 0,
+    /* Torque gain (0-100) */
+    VDCU_VDCU_Param_Trq_Gain = 0,
+    /* Maximum torque for front axle (0-100) */
+    VDCU_VDCU_Param_Trq_MaxFront = 1,
+    /* Maximum torque for rear axle (0-100) */
+    VDCU_VDCU_Param_Trq_MaxRear = 2,
     /* Maximum power in kW (0-140) */
-    VDCU_VDCU_Param_PowerMax = 1,
-    /* Pedal map selector (0-4) */
-    VDCU_VDCU_Param_Ped_MAP = 2,
-    /* Racing mode (OFF,accel, skid, autox, endu ...) (0-9) */
-    VDCU_VDCU_Param_RaceMode = 3,
+    VDCU_VDCU_Param_PwrLim = 3,
     /* Maximum regenerative power in kW (0-40) */
-    VDCU_VDCU_Param_REGEN_PowerMax = 4,
-    /* ENABLE regenerative braking [0,1] */
-    VDCU_VDCU_Param_REGEN_EN = 5,
-    /* Field weakening (0-100) */
-    VDCU_VDCU_Param_FW = 6,
-    /* Request for reverse [0,1] */
-    VDCU_VDCU_Param_Reverse_REQ = 7,
-    /* Request for not limited performance [0,1] */
-    VDCU_VDCU_Param_Boost_REQ = 8,
-    /* Torque distribution between front/rear (0-100) */
-    VDCU_VDCU_Param_Torque_Dist = 12,
+    VDCU_VDCU_Param_Gen_PwrLim = 4,
+    /* Pedal map selector (0-4) */
+    VDCU_VDCU_Param_Ped_MAP = 5,
+    /* Torque distribution to front (0-100) */
+    VDCU_VDCU_Param_TV_Distrib = 10,
     /* Torque vectoring gain on front axle (0-200) */
-    VDCU_VDCU_Param_TV_GainF = 13,
+    VDCU_VDCU_Param_TV_Front_Gain = 11,
+    /* Torque  vectoring speed gain (0-200) */
+    VDCU_VDCU_Param_TV_Speed_Gain = 12,
     /* Torque vectoring gain on rear axle (0-200) */
-    VDCU_VDCU_Param_TV_GainR = 14,
-    /* Maximum torque for front axle (0-32) */
-    VDCU_VDCU_Param_TorqueMaxF = 15,
-    /* Maximum torque for rear axle (0-96) */
-    VDCU_VDCU_Param_TorqueMaxR = 16,
+    VDCU_VDCU_Param_TV_Rear_Gain = 13,
     /* Slip ratio controller slip setpoint (4-20) */
-    VDCU_VDCU_Param_TC_SpSlip = 20,
-    /* Slip ratio controller threshold */
-    VDCU_VDCU_Param_TC_Threshold = 21,
-    /* Slip ratio controller Kp gain (0-) */
-    VDCU_VDCU_Param_TC_Kp = 22,
-    /* Slip ratio controller Ki gain (0-) */
-    VDCU_VDCU_Param_TC_Ki = 23,
-    /* Slip ratio controller Kb gain(0-) */
-    VDCU_VDCU_Param_TC_Kb = 24,
+    VDCU_VDCU_Param_TC_Slip_SP = 16,
+    /* Yaw rate controller reference gain (0-200) */
+    VDCU_VDCU_Param_YC_Ref_Gain = 19,
     /* Yaw controller overal gain (0-200) */
-    VDCU_VDCU_Param_YC_Gain = 30,
-    /* Yaw controller SpeedGain (0-1) */
-    VDCU_VDCU_Param_YC_SpeedGain = 31,
-    /* Yaw controller Kp gain (0-) */
-    VDCU_VDCU_Param_YC_Kp = 32,
-    /* Yaw controller Ki gain (0-) */
-    VDCU_VDCU_Param_YC_Ki = 33,
-    /* Yaw controller Kb gain (0-) */
-    VDCU_VDCU_Param_YC_Kb = 34,
+    VDCU_VDCU_Param_YC_Gain = 20,
+    /* Field weakening (0-100) */
+    VDCU_VDCU_Param_FieldWeak = 23,
+    /* Request for reverse [0,1] (not a parameter) */
+    VDCU_VDCU_Param_Reverse_REQ = 25,
+    /* Racing mode (0-9) (OFF,accel, skid, autox, endu ...) */
+    VDCU_VDCU_Param_RaceMode_REQ = 26,
+    /* ENABLE regenerative braking [0,1] */
+    VDCU_VDCU_Param_Gen_EN = 27,
+    /* ENABLE unlimited performance [0,1] */
+    VDCU_VDCU_Param_Boost_EN = 28,
+    /* Torque speed limitation ramp (0-200) */
+    VDCU_VDCU_Param_Trq_Speed_Ramp = 32,
+    /* Slip ratio controller threshold (0-10) */
+    VDCU_VDCU_Param_TC_Threshold = 35,
+    /* Slip ratio controller Kp gain (0-200) */
+    VDCU_VDCU_Param_TC_Kp = 36,
+    /* Slip ratio controller Ki gain (0-200) */
+    VDCU_VDCU_Param_TC_Ki = 37,
+    /* Slip ratio controller Kb gain(0-200) */
+    VDCU_VDCU_Param_TC_Kb = 38,
+    /* Yaw controller SpeedGain (0-200) */
+    VDCU_VDCU_Param_YC_Speed_Gain = 40,
+    /* Yaw controller Kp gain (0-200) */
+    VDCU_VDCU_Param_YC_Kp = 41,
+    /* Yaw controller Ki gain (0-200) */
+    VDCU_VDCU_Param_YC_Ki = 42,
+    /* Yaw controller Kb gain (0-200) */
+    VDCU_VDCU_Param_YC_Kb = 43,
+    /* Feedforward gain (0-200) */
+    VDCU_VDCU_Param_FeedForward_Gain = 44,
+    /* Power limiting speed ramp gain (0-200) */
+    VDCU_VDCU_Param_PwrLim_Ramp_Gain = 50,
 };
 
 enum VDCU_VDCU_State {
@@ -121,6 +120,17 @@ enum VDCU_VDCU_State {
     VDCU_VDCU_State_TORQUE_EN = 1,
     /* Error state */
     VDCU_VDCU_State_ERROR = 2,
+};
+
+enum ECUF_CAL_STWIndex {
+    /* None */
+    ECUF_CAL_STWIndex_None = 0,
+    /* Left position (output is positive) */
+    ECUF_CAL_STWIndex_STWLeft = 1,
+    /* Center position */
+    ECUF_CAL_STWIndex_STWCenter = 2,
+    /* Right position (output is negative) */
+    ECUF_CAL_STWIndex_STWRight = 3,
 };
 
 enum ECUB_Batt_code {
@@ -685,13 +695,13 @@ typedef struct ECUF_Dashboard_t {
 	/* 1-pressed / 0-not pressed */
 	uint8_t	START;
 
-	/* Waterpump override switch */
+	/* Waterpump override switch (SW1) */
 	uint8_t	WP_ON;
 
-	/* Traction control switch */
+	/* Traction control switch (SW2) */
 	uint8_t	TCS_ON;
 
-	/* Yaw control stabilization switch */
+	/* Yaw control stabilization switch (SW3) */
 	uint8_t	YC_ON;
 
 	/* Ambient light level */

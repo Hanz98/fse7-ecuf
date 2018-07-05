@@ -12,10 +12,11 @@
 extern "C" {
 #endif
 
-enum { CAN_MESSAGE_SIZE = 64 };
+enum { CAN_MESSAGE_SIZE = 8 };
 
 struct CAN_msg_header {
 	uint32_t timestamp;
+	int bus;
 	CAN_ID_t id;
 	uint16_t length;
 };
