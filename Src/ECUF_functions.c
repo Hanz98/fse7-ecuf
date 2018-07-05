@@ -120,11 +120,6 @@ void dashInit(void){
 
 		HAL_Delay(100);
 		dataGreen[0] += TEMP_ER;
-		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
-			HAL_SPI_Transmit(&hspi2, (uint8_t*)dataGreen, 4, 5);
-		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
-
-		HAL_Delay(100);
 		dataGreen[0] += RTD;
 		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
 			HAL_SPI_Transmit(&hspi2, (uint8_t*)dataGreen, 4, 5);
@@ -248,16 +243,18 @@ void indicatorControl(){
 		dataGreen[0] &= RE_LW_ER;
 		dataRed[0] &= RE_LW_ER;
 	}
-*/
+
 	if (statusBack.CarState < 2 ){
 		dataGreen[0] &= TEMP_ER;
 		dataRed[0] &= TEMP_ER;
 	}
+
 	else {
 		dataGreen[0] &= RE_TEMP_ER;
 		dataRed[0] &= RE_TEMP_ER;
 	}
-	if (statusVdcu.YC_ENABLED ){
+*/
+	if (!statusVdcu.YC_ENABLED ){
 		dataGreen[0] |= STABILIZATION;
 		dataRed[0] |= STABILIZATION;
 	}
@@ -265,7 +262,7 @@ void indicatorControl(){
 		dataGreen[0] &= RE_STABILIZATION;
 		dataRed[0] &= RE_STABILIZATION;
 	}
-	if (statusVdcu.TC_ENABLED < 2 ){
+	if (!statusVdcu.TC_ENABLED){
 		dataGreen[0] &= TRACTION;
 		dataRed[0] &= TRACTION;
 	}
