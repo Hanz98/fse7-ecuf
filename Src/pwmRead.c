@@ -32,14 +32,32 @@ int Get_STRW_Calibrated_Angle(){
         angle = 127 * DEGREE;
     return angle;
 }
+static uint32_t Flash_Address = 0x080E0000;
+
+void SaveCalibration(){
+	Flash_EraseSector(FLASH_SECTOR_11); // nevim co se tam má dát
+	Flash_Write((uint8_t*)Flash_Address,&Calibration,sizeof(Calibration));
+}
 
 void calib(){
-	if(calibration.which == ECUF_CAL_STWIndex_STWLeft) {
 
+	if(calibration.which == ECUF_CAL_STWIndex_STWLeft) {
+		Calibration.Left = Get_STRW_Calibrated_angle();
 	}
+
+	if(calibration.which == ECUF_CAL_STWIndex_STWRight) {
+		Calibration.Right = Get_STRW_Calibrated_angle();
+	}
+
+	if(calibration.which == ECUF_CAL_STWIndex_STWCenter) {
+		Calibration.Center = Get_STRW_Calibrated_angle();
+	}
+	SaveCalibration();
 }
 
 /*
+ *
+ *		FILTRACE - NEVÍM S NÍ MOC RADY
  *
 void MedianInit(MEDIAN_TypeDef* median){
 

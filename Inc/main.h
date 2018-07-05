@@ -108,6 +108,7 @@
 #define STABILIZATION 0X0008
 #define TRACTION 0x0004
 #define IMPLAUSILITY 0x0001
+#define RTD 0x0100
 
 #define RE_EFORCE 0x03FF
 #define	RE_CAN_ER 0xFF7F
@@ -116,7 +117,7 @@
 #define RE_STABILIZATION 0XFFF7
 #define RE_TRACTION 0xFFFD
 #define RE_IMPLAUSILITY 0xFFFE
-
+#define RE_RTD 0xFEFF
 
 #define PRESS 0
 #define BREAK 0

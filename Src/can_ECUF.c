@@ -1,7 +1,5 @@
 #include "can_ECUF.h"
 #include <string.h>
-#include <eforce/tx.h>
-
 
 CAN_msg_status_t ECUA_Status_status;
 ECUA_Status_t ECUA_Status_data;
@@ -9,6 +7,8 @@ CAN_msg_status_t ECUA_Estimation_status;
 ECUA_Estimation_t ECUA_Estimation_data;
 CAN_msg_status_t ECUB_Status_status;
 ECUB_Status_t ECUB_Status_data;
+CAN_msg_status_t ECUB_Cooling_status;
+ECUB_Cooling_t ECUB_Cooling_data;
 int32_t ECUF_Status_last_sent;
 int32_t ECUF_STW_last_sent;
 int32_t ECUF_DISSusp_last_sent;
@@ -25,6 +25,7 @@ void candbInit(void) {
     canInitMsgStatus(&ECUA_Status_status, 500);
     canInitMsgStatus(&ECUA_Estimation_status, 500);
     canInitMsgStatus(&ECUB_Status_status, 1000);
+    canInitMsgStatus(&ECUB_Cooling_status, -1);
     ECUF_Status_last_sent = -1;
     ECUF_STW_last_sent = -1;
     ECUF_DISSusp_last_sent = -1;
@@ -300,24 +301,106 @@ void ECUB_Status_on_receive(int (*callback)(ECUB_Status_t* data)) {
     ECUB_Status_status.on_receive = (void (*)(void)) callback;
 }
 
+int ECUB_decode_Cooling_s(const uint8_t* bytes, size_t length, ECUB_Cooling_t* data_out) {
+    if (length < 7)
+        return 0;
+
+    data_out->WP1 = (bytes[0] & 0x0F);
+    data_out->WP2 = ((bytes[0] >> 4) & 0x0F);
+    data_out->FAN1 = (bytes[1] & 0x0F);
+    data_out->FAN2 = ((bytes[1] >> 4) & 0x0F);
+    data_out->FAN3 = (bytes[2] & 0x0F);
+    data_out->WARN_MOT_FR_TEMP = (bytes[3] & 0x01);
+    data_out->WARN_MOT_FL_TEMP = ((bytes[3] >> 1) & 0x01);
+    data_out->WARN_MOT_RR_TEMP = ((bytes[3] >> 2) & 0x01);
+    data_out->WARN_MOT_RL_TEMP = ((bytes[3] >> 3) & 0x01);
+    data_out->WARN_MCU_FR_TEMP = ((bytes[3] >> 4) & 0x01);
+    data_out->WARN_MCU_FL_TEMP = ((bytes[3] >> 5) & 0x01);
+    data_out->WARN_MCU_RR_TEMP = ((bytes[3] >> 6) & 0x01);
+    data_out->WARN_MCU_RL_TEMP = ((bytes[3] >> 7) & 0x01);
+    data_out->WARN_Brake_RR_TEMP = (bytes[4] & 0x01);
+    data_out->WARN_Brake_RL_TEMP = ((bytes[4] >> 1) & 0x01);
+    data_out->FT_MOT_FR_OT = (bytes[5] & 0x01);
+    data_out->FT_MOT_FL_OT = ((bytes[5] >> 1) & 0x01);
+    data_out->FT_MOT_RR_OT = ((bytes[5] >> 2) & 0x01);
+    data_out->FT_MOT_RL_OT = ((bytes[5] >> 3) & 0x01);
+    data_out->FT_MCU_FR_OT = ((bytes[5] >> 4) & 0x01);
+    data_out->FT_MCU_FL_OT = ((bytes[5] >> 5) & 0x01);
+    data_out->FT_MCU_RR_OT = ((bytes[5] >> 6) & 0x01);
+    data_out->FT_MCU_RL_OT = ((bytes[5] >> 7) & 0x01);
+    data_out->FT_Brake_RR_OT = (bytes[6] & 0x01);
+    data_out->FT_Brake_RL_OT = ((bytes[6] >> 1) & 0x01);
+    return 1;
+}
+
+int ECUB_decode_Cooling(const uint8_t* bytes, size_t length, uint8_t* WP1_out, uint8_t* WP2_out, uint8_t* FAN1_out, uint8_t* FAN2_out, uint8_t* FAN3_out, uint8_t* WARN_MOT_FR_TEMP_out, uint8_t* WARN_MOT_FL_TEMP_out, uint8_t* WARN_MOT_RR_TEMP_out, uint8_t* WARN_MOT_RL_TEMP_out, uint8_t* WARN_MCU_FR_TEMP_out, uint8_t* WARN_MCU_FL_TEMP_out, uint8_t* WARN_MCU_RR_TEMP_out, uint8_t* WARN_MCU_RL_TEMP_out, uint8_t* WARN_Brake_RR_TEMP_out, uint8_t* WARN_Brake_RL_TEMP_out, uint8_t* FT_MOT_FR_OT_out, uint8_t* FT_MOT_FL_OT_out, uint8_t* FT_MOT_RR_OT_out, uint8_t* FT_MOT_RL_OT_out, uint8_t* FT_MCU_FR_OT_out, uint8_t* FT_MCU_FL_OT_out, uint8_t* FT_MCU_RR_OT_out, uint8_t* FT_MCU_RL_OT_out, uint8_t* FT_Brake_RR_OT_out, uint8_t* FT_Brake_RL_OT_out) {
+    if (length < 7)
+        return 0;
+
+    *WP1_out = (bytes[0] & 0x0F);
+    *WP2_out = ((bytes[0] >> 4) & 0x0F);
+    *FAN1_out = (bytes[1] & 0x0F);
+    *FAN2_out = ((bytes[1] >> 4) & 0x0F);
+    *FAN3_out = (bytes[2] & 0x0F);
+    *WARN_MOT_FR_TEMP_out = (bytes[3] & 0x01);
+    *WARN_MOT_FL_TEMP_out = ((bytes[3] >> 1) & 0x01);
+    *WARN_MOT_RR_TEMP_out = ((bytes[3] >> 2) & 0x01);
+    *WARN_MOT_RL_TEMP_out = ((bytes[3] >> 3) & 0x01);
+    *WARN_MCU_FR_TEMP_out = ((bytes[3] >> 4) & 0x01);
+    *WARN_MCU_FL_TEMP_out = ((bytes[3] >> 5) & 0x01);
+    *WARN_MCU_RR_TEMP_out = ((bytes[3] >> 6) & 0x01);
+    *WARN_MCU_RL_TEMP_out = ((bytes[3] >> 7) & 0x01);
+    *WARN_Brake_RR_TEMP_out = (bytes[4] & 0x01);
+    *WARN_Brake_RL_TEMP_out = ((bytes[4] >> 1) & 0x01);
+    *FT_MOT_FR_OT_out = (bytes[5] & 0x01);
+    *FT_MOT_FL_OT_out = ((bytes[5] >> 1) & 0x01);
+    *FT_MOT_RR_OT_out = ((bytes[5] >> 2) & 0x01);
+    *FT_MOT_RL_OT_out = ((bytes[5] >> 3) & 0x01);
+    *FT_MCU_FR_OT_out = ((bytes[5] >> 4) & 0x01);
+    *FT_MCU_FL_OT_out = ((bytes[5] >> 5) & 0x01);
+    *FT_MCU_RR_OT_out = ((bytes[5] >> 6) & 0x01);
+    *FT_MCU_RL_OT_out = ((bytes[5] >> 7) & 0x01);
+    *FT_Brake_RR_OT_out = (bytes[6] & 0x01);
+    *FT_Brake_RL_OT_out = ((bytes[6] >> 1) & 0x01);
+    return 1;
+}
+
+int ECUB_get_Cooling(ECUB_Cooling_t* data_out) {
+    if (!(ECUB_Cooling_status.flags & CAN_MSG_RECEIVED))
+        return 0;
+
+    if (data_out)
+        memcpy(data_out, &ECUB_Cooling_data, sizeof(ECUB_Cooling_t));
+
+    int flags = ECUB_Cooling_status.flags;
+    ECUB_Cooling_status.flags &= ~CAN_MSG_PENDING;
+    return flags;
+}
+
+void ECUB_Cooling_on_receive(int (*callback)(ECUB_Cooling_t* data)) {
+    ECUB_Cooling_status.on_receive = (void (*)(void)) callback;
+}
+
 int ECUF_send_Status_s(const ECUF_Status_t* data) {
-    uint8_t buffer[5];
+    uint8_t buffer[6];
     buffer[0] = (data->SDC_SDBC ? 1 : 0) | (data->SDC_Inertia ? 2 : 0) | (data->SDC_FWIL ? 4 : 0);
-    buffer[1] = (data->PWR_ECUP_EN ? 1 : 0) | (data->PWR_ECUG_EN ? 2 : 0) | (data->PWR_DTLG_EN ? 4 : 0) | (data->PWR_ECUS_EN ? 8 : 0) | (data->PWR_DASH_EN ? 16 : 0) | (data->PWR_FAN_BrakeF_EN ? 32 : 0);
+    buffer[1] = (data->PWR_ECUP_EN ? 1 : 0) | (data->PWR_ECUG_EN ? 2 : 0) | (data->PWR_DTLG_EN ? 4 : 0) | (data->PWR_ECUS_EN ? 8 : 0) | (data->PWR_DASH_EN ? 16 : 0) | (data->PWR_FAN_BrakeF_EN ? 32 : 0) | (data->WARN_Brake_FR_TEMP ? 64 : 0) | (data->WARN_Brake_FL_TEMP ? 128 : 0);
     buffer[2] = (data->FT_PWR_ECUP ? 1 : 0) | (data->FT_PWR_ECUG ? 2 : 0) | (data->FT_PWR_ECUS ? 4 : 0) | (data->FT_PWR_DTLG ? 8 : 0) | (data->FT_PWR_DASH ? 16 : 0) | (data->FT_PWR_FAN_BrakeF ? 32 : 0) | (data->FT_STW_Sensor ? 64 : 0) | (data->FT_STW_Cal ? 128 : 0);
     buffer[3] = (data->FT_DisFR ? 1 : 0) | (data->FT_DisFL ? 2 : 0) | (data->FT_DisRR ? 4 : 0) | (data->FT_DisRL ? 8 : 0) | (data->FT_DisFR_Cal ? 16 : 0) | (data->FT_DisFL_Cal ? 32 : 0) | (data->FT_DisRR_Cal ? 64 : 0) | (data->FT_DisRL_Cal ? 128 : 0);
-    buffer[4] = data->Volt_GLV_In;
+    buffer[4] = (data->FT_Brake_FR_OT ? 1 : 0) | (data->FT_Brake_FL_OT ? 2 : 0);
+    buffer[5] = data->Volt_GLV_In;
     ECUF_Status_last_sent = txGetTimeMillis();
     return txSendCANMessage(bus_CAN1_powertrain, ECUF_Status_id, buffer, sizeof(buffer));
 }
 
-int ECUF_send_Status(uint8_t SDC_SDBC, uint8_t SDC_Inertia, uint8_t SDC_FWIL, uint8_t PWR_ECUP_EN, uint8_t PWR_ECUG_EN, uint8_t PWR_DTLG_EN, uint8_t PWR_ECUS_EN, uint8_t PWR_DASH_EN, uint8_t PWR_FAN_BrakeF_EN, uint8_t FT_PWR_ECUP, uint8_t FT_PWR_ECUG, uint8_t FT_PWR_ECUS, uint8_t FT_PWR_DTLG, uint8_t FT_PWR_DASH, uint8_t FT_PWR_FAN_BrakeF, uint8_t FT_STW_Sensor, uint8_t FT_STW_Cal, uint8_t FT_DisFR, uint8_t FT_DisFL, uint8_t FT_DisRR, uint8_t FT_DisRL, uint8_t FT_DisFR_Cal, uint8_t FT_DisFL_Cal, uint8_t FT_DisRR_Cal, uint8_t FT_DisRL_Cal, uint8_t Volt_GLV_In) {
-    uint8_t buffer[5];
+int ECUF_send_Status(uint8_t SDC_SDBC, uint8_t SDC_Inertia, uint8_t SDC_FWIL, uint8_t PWR_ECUP_EN, uint8_t PWR_ECUG_EN, uint8_t PWR_DTLG_EN, uint8_t PWR_ECUS_EN, uint8_t PWR_DASH_EN, uint8_t PWR_FAN_BrakeF_EN, uint8_t WARN_Brake_FR_TEMP, uint8_t WARN_Brake_FL_TEMP, uint8_t FT_PWR_ECUP, uint8_t FT_PWR_ECUG, uint8_t FT_PWR_ECUS, uint8_t FT_PWR_DTLG, uint8_t FT_PWR_DASH, uint8_t FT_PWR_FAN_BrakeF, uint8_t FT_STW_Sensor, uint8_t FT_STW_Cal, uint8_t FT_DisFR, uint8_t FT_DisFL, uint8_t FT_DisRR, uint8_t FT_DisRL, uint8_t FT_DisFR_Cal, uint8_t FT_DisFL_Cal, uint8_t FT_DisRR_Cal, uint8_t FT_DisRL_Cal, uint8_t FT_Brake_FR_OT, uint8_t FT_Brake_FL_OT, uint8_t Volt_GLV_In) {
+    uint8_t buffer[6];
     buffer[0] = (SDC_SDBC ? 1 : 0) | (SDC_Inertia ? 2 : 0) | (SDC_FWIL ? 4 : 0);
-    buffer[1] = (PWR_ECUP_EN ? 1 : 0) | (PWR_ECUG_EN ? 2 : 0) | (PWR_DTLG_EN ? 4 : 0) | (PWR_ECUS_EN ? 8 : 0) | (PWR_DASH_EN ? 16 : 0) | (PWR_FAN_BrakeF_EN ? 32 : 0);
+    buffer[1] = (PWR_ECUP_EN ? 1 : 0) | (PWR_ECUG_EN ? 2 : 0) | (PWR_DTLG_EN ? 4 : 0) | (PWR_ECUS_EN ? 8 : 0) | (PWR_DASH_EN ? 16 : 0) | (PWR_FAN_BrakeF_EN ? 32 : 0) | (WARN_Brake_FR_TEMP ? 64 : 0) | (WARN_Brake_FL_TEMP ? 128 : 0);
     buffer[2] = (FT_PWR_ECUP ? 1 : 0) | (FT_PWR_ECUG ? 2 : 0) | (FT_PWR_ECUS ? 4 : 0) | (FT_PWR_DTLG ? 8 : 0) | (FT_PWR_DASH ? 16 : 0) | (FT_PWR_FAN_BrakeF ? 32 : 0) | (FT_STW_Sensor ? 64 : 0) | (FT_STW_Cal ? 128 : 0);
     buffer[3] = (FT_DisFR ? 1 : 0) | (FT_DisFL ? 2 : 0) | (FT_DisRR ? 4 : 0) | (FT_DisRL ? 8 : 0) | (FT_DisFR_Cal ? 16 : 0) | (FT_DisFL_Cal ? 32 : 0) | (FT_DisRR_Cal ? 64 : 0) | (FT_DisRL_Cal ? 128 : 0);
-    buffer[4] = Volt_GLV_In;
+    buffer[4] = (FT_Brake_FR_OT ? 1 : 0) | (FT_Brake_FL_OT ? 2 : 0);
+    buffer[5] = Volt_GLV_In;
     ECUF_Status_last_sent = txGetTimeMillis();
     return txSendCANMessage(bus_CAN1_powertrain, ECUF_Status_id, buffer, sizeof(buffer));
 }
@@ -388,16 +471,16 @@ int ECUF_DISSusp_need_to_send(void) {
 
 int ECUF_send_Dashboard_s(const ECUF_Dashboard_t* data) {
     uint8_t buffer[3];
-    buffer[0] = (data->TSON ? 1 : 0) | (data->START ? 2 : 0) | (data->SW1 ? 4 : 0) | (data->SW2 ? 8 : 0) | (data->SW3 ? 16 : 0);
+    buffer[0] = (data->TSON ? 1 : 0) | (data->START ? 2 : 0) | (data->WP_ON ? 4 : 0) | (data->TCS_ON ? 8 : 0) | (data->YC_ON ? 16 : 0);
     buffer[1] = data->AmbientLight;
     buffer[2] = data->AmbientTemp;
     ECUF_Dashboard_last_sent = txGetTimeMillis();
     return txSendCANMessage(bus_CAN1_powertrain, ECUF_Dashboard_id, buffer, sizeof(buffer));
 }
 
-int ECUF_send_Dashboard(uint8_t TSON, uint8_t START, uint8_t SW1, uint8_t SW2, uint8_t SW3, uint8_t AmbientLight, uint8_t AmbientTemp) {
+int ECUF_send_Dashboard(uint8_t TSON, uint8_t START, uint8_t WP_ON, uint8_t TCS_ON, uint8_t YC_ON, uint8_t AmbientLight, uint8_t AmbientTemp) {
     uint8_t buffer[3];
-    buffer[0] = (TSON ? 1 : 0) | (START ? 2 : 0) | (SW1 ? 4 : 0) | (SW2 ? 8 : 0) | (SW3 ? 16 : 0);
+    buffer[0] = (TSON ? 1 : 0) | (START ? 2 : 0) | (WP_ON ? 4 : 0) | (TCS_ON ? 8 : 0) | (YC_ON ? 16 : 0);
     buffer[1] = AmbientLight;
     buffer[2] = AmbientTemp;
     ECUF_Dashboard_last_sent = txGetTimeMillis();
@@ -520,40 +603,40 @@ void ECUP_Status_on_receive(int (*callback)(ECUP_Status_t* data)) {
 }
 
 int VDCU_decode_Status_s(const uint8_t* bytes, size_t length, VDCU_Status_t* data_out) {
-    if (length < 4)
+    if (length < 5)
         return 0;
 
-    data_out->State = (bytes[1] & 0x0F);
-    data_out->FT_Dis_Cal = (bytes[2] & 0x01);
-    data_out->FT_Sensor = ((bytes[2] >> 1) & 0x01);
-    data_out->Temp_derating = ((bytes[2] >> 2) & 0x01);
-    data_out->ACP_derate = ((bytes[2] >> 3) & 0x01);
-    data_out->Disch_ACT = ((bytes[2] >> 4) & 0x01);
-    data_out->Reverse_ACT = ((bytes[2] >> 5) & 0x01);
-    data_out->TV_ENABLED = ((bytes[2] >> 6) & 0x01);
-    data_out->TC_ENABLED = ((bytes[2] >> 7) & 0x01);
-    data_out->YC_ENABLED = (bytes[3] & 0x01);
-    data_out->TC_ACT = ((bytes[3] >> 1) & 0x01);
-    data_out->YC_ACT = ((bytes[3] >> 2) & 0x01);
+    data_out->State = (enum VDCU_VDCU_State) ((bytes[1] & 0x0F));
+    data_out->TV_ENABLED = (bytes[2] & 0x01);
+    data_out->TC_ENABLED = ((bytes[2] >> 1) & 0x01);
+    data_out->YC_ENABLED = ((bytes[2] >> 2) & 0x01);
+    data_out->FT_Dis_Cal = (bytes[3] & 0x01);
+    data_out->FT_Sensor = ((bytes[3] >> 1) & 0x01);
+    data_out->TEMP_derating = (bytes[4] & 0x01);
+    data_out->ACP_derating = ((bytes[4] >> 1) & 0x01);
+    data_out->Disch_ACT = ((bytes[4] >> 2) & 0x01);
+    data_out->Reverse_ACT = ((bytes[4] >> 3) & 0x01);
+    data_out->TC_ACT = ((bytes[4] >> 4) & 0x01);
+    data_out->YC_ACT = ((bytes[4] >> 5) & 0x01);
     return 1;
 }
 
-int VDCU_decode_Status(const uint8_t* bytes, size_t length, uint8_t* State_out, uint8_t* FT_Dis_Cal_out, uint8_t* FT_Sensor_out, uint8_t* Temp_derating_out, uint8_t* ACP_derate_out, uint8_t* Disch_ACT_out, uint8_t* Reverse_ACT_out, uint8_t* TV_ENABLED_out, uint8_t* TC_ENABLED_out, uint8_t* YC_ENABLED_out, uint8_t* TC_ACT_out, uint8_t* YC_ACT_out) {
-    if (length < 4)
+int VDCU_decode_Status(const uint8_t* bytes, size_t length, enum VDCU_VDCU_State* State_out, uint8_t* TV_ENABLED_out, uint8_t* TC_ENABLED_out, uint8_t* YC_ENABLED_out, uint8_t* FT_Dis_Cal_out, uint8_t* FT_Sensor_out, uint8_t* TEMP_derating_out, uint8_t* ACP_derating_out, uint8_t* Disch_ACT_out, uint8_t* Reverse_ACT_out, uint8_t* TC_ACT_out, uint8_t* YC_ACT_out) {
+    if (length < 5)
         return 0;
 
-    *State_out = (bytes[1] & 0x0F);
-    *FT_Dis_Cal_out = (bytes[2] & 0x01);
-    *FT_Sensor_out = ((bytes[2] >> 1) & 0x01);
-    *Temp_derating_out = ((bytes[2] >> 2) & 0x01);
-    *ACP_derate_out = ((bytes[2] >> 3) & 0x01);
-    *Disch_ACT_out = ((bytes[2] >> 4) & 0x01);
-    *Reverse_ACT_out = ((bytes[2] >> 5) & 0x01);
-    *TV_ENABLED_out = ((bytes[2] >> 6) & 0x01);
-    *TC_ENABLED_out = ((bytes[2] >> 7) & 0x01);
-    *YC_ENABLED_out = (bytes[3] & 0x01);
-    *TC_ACT_out = ((bytes[3] >> 1) & 0x01);
-    *YC_ACT_out = ((bytes[3] >> 2) & 0x01);
+    *State_out = (enum VDCU_VDCU_State) ((bytes[1] & 0x0F));
+    *TV_ENABLED_out = (bytes[2] & 0x01);
+    *TC_ENABLED_out = ((bytes[2] >> 1) & 0x01);
+    *YC_ENABLED_out = ((bytes[2] >> 2) & 0x01);
+    *FT_Dis_Cal_out = (bytes[3] & 0x01);
+    *FT_Sensor_out = ((bytes[3] >> 1) & 0x01);
+    *TEMP_derating_out = (bytes[4] & 0x01);
+    *ACP_derating_out = ((bytes[4] >> 1) & 0x01);
+    *Disch_ACT_out = ((bytes[4] >> 2) & 0x01);
+    *Reverse_ACT_out = ((bytes[4] >> 3) & 0x01);
+    *TC_ACT_out = ((bytes[4] >> 4) & 0x01);
+    *YC_ACT_out = ((bytes[4] >> 5) & 0x01);
     return 1;
 }
 
@@ -578,7 +661,7 @@ void VDCU_Status_on_receive(int (*callback)(VDCU_Status_t* data)) {
     VDCU_Status_status.on_receive = (void (*)(void)) callback;
 }
 
-void candbHandleMessage(uint32_t timestamp, CAN_ID_t id, const uint8_t* payload, size_t payload_length) {
+void candbHandleMessage(uint32_t timestamp, int bus, CAN_ID_t id, const uint8_t* payload, size_t payload_length) {
     switch (id) {
     case ECUA_Status_id: {
         if (!ECUA_decode_Status_s(payload, payload_length, &ECUA_Status_data))
@@ -610,6 +693,17 @@ void candbHandleMessage(uint32_t timestamp, CAN_ID_t id, const uint8_t* payload,
 
         if (ECUB_Status_status.on_receive)
             ((int (*)(ECUB_Status_t*)) ECUB_Status_status.on_receive)(&ECUB_Status_data);
+
+        break;
+    }
+    case ECUB_Cooling_id: {
+        if (!ECUB_decode_Cooling_s(payload, payload_length, &ECUB_Cooling_data))
+            break;
+
+        canUpdateMsgStatusOnReceive(&ECUB_Cooling_status, timestamp);
+
+        if (ECUB_Cooling_status.on_receive)
+            ((int (*)(ECUB_Cooling_t*)) ECUB_Cooling_status.on_receive)(&ECUB_Cooling_data);
 
         break;
     }

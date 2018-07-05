@@ -2,7 +2,7 @@
 #include "stm32f1xx_hal.h"
 #include "flash.c"
 
-#define DEGREE 0
+#define DEGREE 16
 
 uint32_t PWM_Period = 0;
 uint32_t STRW_Sensor_Reading = 0;

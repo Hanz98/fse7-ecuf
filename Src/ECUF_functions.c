@@ -43,8 +43,6 @@ extern ECUF_DISSusp_t disSup;
 extern ECUF_Dashboard_t dashBoard;
 extern ECUF_TEMPSuspF_t temp;
 
-//extern ECUF_REQCalibSTW_t calibration;
-
 extern ECUA_Status_t statusA;
 extern ECUB_Status_t statusBack;
 extern VDCU_Status_t statusVdcu;
@@ -62,17 +60,17 @@ void checkDash(ECUF_Dashboard_t* data){
 	else
 		data->START = 0;
 	if (HAL_GPIO_ReadPin(SW1_GPIO_Port,SW1_Pin) == PRESS )
-		data->SW1 = 1;
+		data->WP_ON = 1;
 	else
-		data->SW1 = 0;
+		data->WP_ON = 0;
 	if (HAL_GPIO_ReadPin(SW2_GPIO_Port,SW2_Pin) == PRESS )
-		data->SW2 = 1;
+		data->TCS_ON = 1;
 	else
-		data->SW2 = 0;
+		data->TCS_ON = 0;
 	if (HAL_GPIO_ReadPin(SW3_GPIO_Port,SW3_Pin) == PRESS )
-		data->SW3 = 1;
+		data->YC_ON = 1;
 	else
-		data->SW3 = 0;
+		data->YC_ON = 0;
 
 
 }
@@ -277,6 +275,7 @@ void indicatorControl(){
 		dataGreen[0] &= RE_TRACTION;
 		dataRed[0] &= RE_TRACTION;
 	}
+*/
 	if (statusP.APPS_Plausible){
 		dataGreen[0] |= IMPLAUSILITY;
 		dataRed[0] |= IMPLAUSILITY;
@@ -286,7 +285,14 @@ void indicatorControl(){
 		dataRed[0] &= RE_IMPLAUSILITY;
 	}
 
-	 */
+	if (statusVdcu.State == 1){
+		dataGreen[0] |= RTD;
+		dataRed[0] |= RTD;
+	}
+	else {
+		dataGreen[0] &= RE_RTD;
+		dataRed[0] &= RE_RTD;
+	}
 }
 
 void barControl(){
