@@ -1,7 +1,9 @@
 #include "can_ECUF.h"
 #include "main.h"
 #include "stm32f1xx_hal.h"
-#include "pwmRead.h"
+#include "calibration.h"
+#include "pwm.h"
+
 extern SPI_HandleTypeDef hspi1;
 extern SPI_HandleTypeDef hspi2;
 
@@ -38,7 +40,7 @@ extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim3;
 
 extern ECUF_Status_t statusFront;
-extern ECUF_STW_t steering;
+//extern ECUF_STW_t steering;
 extern ECUF_DISSusp_t disSup;
 extern ECUF_Dashboard_t dashBoard;
 extern ECUF_TEMPSuspF_t temp;
@@ -76,7 +78,6 @@ void checkDash(ECUF_Dashboard_t* data){
 }
 
 void checkShutdown(ECUF_Status_t* data){
-	steering.Angle = time1;
 	if (HAL_GPIO_ReadPin(SDBC_GPIO_Port,SDBC_Pin) == BREAK)
 		data->SDC_SDBC = 1;
 	else
@@ -328,36 +329,48 @@ void dashControl(){
 
 
 
-
 }
+
+void Send_STRW_Angle(){
+	int current_tick = HAL_GetTick();
+
+	if(ECUF_STW_need_to_send()){
+		int angle = Get_Steering_Angle();
+
+		if (!HAL_GPIO_ReadPin(SWS_ERR_IN_GPIO_Port,SWS_ERR_IN_Pin)){
+			// error: PWM timed out - sensor disconnected?
+			ECUF_send_STW(angle / DEGREE, 0, 0, 0);
+		}else{
+			ECUF_send_STW(angle / DEGREE, 0, 1, 0);
+		}
+	}
+}
+
 
 void sendData(void){
 
 	if(ECUF_Status_need_to_send()){
 			ECUF_send_Status_s(&statusFront);
-			HAL_CAN_Receive_IT(&hcan1,CAN_FIFO0);
+			//HAL_CAN_Receive_IT(&hcan1,CAN_FIFO0);
 	    }
 
 	if (ECUF_Dashboard_need_to_send()){
 		ECUF_send_Dashboard_s(&dashBoard);
-		HAL_CAN_Receive_IT(&hcan1,CAN_FIFO0);
+		//HAL_CAN_Receive_IT(&hcan1,CAN_FIFO0);
 	 }
 
 	 if (ECUF_DISSusp_need_to_send()){
 		ECUF_send_DISSusp_s(&disSup);
-  	    HAL_CAN_Receive_IT(&hcan1,CAN_FIFO0);
+  	    //HAL_CAN_Receive_IT(&hcan1,CAN_FIFO0);
 	}
 
 	if (ECUF_TEMPSuspF_need_to_send()){
 		ECUF_send_TEMPSuspF_s(&temp);
-		HAL_CAN_Receive_IT(&hcan2,CAN_FIFO0);
+		//HAL_CAN_Receive_IT(&hcan2,CAN_FIFO0);
 	}
 
-	if(ECUF_STW_need_to_send()){
-		ECUF_send_STW_s(&steering);
-  	    HAL_CAN_Receive_IT(&hcan1,CAN_FIFO0);
-	}
-	HAL_CAN_Receive_IT(&hcan1,CAN_FIFO0);
+	Send_STRW_Angle();
+	//HAL_CAN_Receive_IT(&hcan1,CAN_FIFO0);
 }
 
 void receiveData(void){
@@ -372,6 +385,17 @@ void receiveData(void){
 	  if(ECUA_get_Estimation(&estimationA) & CAN_MSG_PENDING){
 	  }
 
+	  ECUF_REQCalibSTW_t reqCalib;
+	  if (ECUF_get_REQCalibSTW(&reqCalib) & CAN_MSG_PENDING) {
+		  calib(&reqCalib);
+	  }
+
+	  // Uncomment below to force calibration after start
+	  /*if (HAL_GetTick() > 10000) {
+		  reqCalib.which = ECUF_CAL_STWIndex_STWCenter;
+		  calib(&reqCalib);
+		  for (;;) {}
+	  }*/
 
 }
 int32_t rescale(int32_t value, float oldMin, float oldMax, float newMin, float newMax){
@@ -479,13 +503,4 @@ void fanCheck(){
 
 	}
 
-}
-
-void STRWRead(){
-	steering.Angle = Get_STRW_Calibrated_Angle() * 0.1;
-	if (HAL_GPIO_ReadPin(SWS_ERR_IN_GPIO_Port,SWS_ERR_IN_Pin)){
-		steering.FT_STW = 1;
-	}
-	else
-		steering.FT_STW = 0;
 }

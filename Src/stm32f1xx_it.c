@@ -38,34 +38,8 @@
 /* USER CODE BEGIN 0 */
 #include "can_ECUF.h"
 
-#include "pwm.c"
+#include "pwm.h"
 extern TIM_HandleTypeDef htim3;
-
-extern struct pwm timer;
-int start = 0;
-volatile int time1 = 0;
-int time2 = 50;
-int validAt = 0;
-int dataOut;
-void updatePwm(struct pwm* pwm, int input, volatile uint32_t time){
-	if (input){
-		start = time;
-	}
-	else{
-		time1 = (start - time) & 0xFFFF;
-//		time1 = time1 - (0.025 * (time1 - time2));
-		validAt = HAL_GetTick();
-
-		if (time1 > 8){
-				time1 = (time1 - 8) * 2;
-//				time1 = time1 - (0.25 * (time1 - time2));
-
-				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, time1);
-				time2 = time1;
-			}
-		}
-	}
-long timer1 = 0;
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
@@ -214,6 +188,7 @@ void SysTick_Handler(void)
   HAL_IncTick();
   HAL_SYSTICK_IRQHandler();
   /* USER CODE BEGIN SysTick_IRQn 1 */
+  static int timer1;
   timer1++;
   if (timer1 >= 500){
 	  timer1 = 0;
@@ -488,6 +463,26 @@ void CAN2_SCE_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+extern PwmInput pwmSWS;
 
+inline void UpdatePwm(PwmInput* pwm, int input, uint32_t time) {
+	if (input) {
+		pwm->start = time;
+	}
+	else {
+		pwm->time = (time - pwm->start) & 0xffff;
+		pwm->validAt = HAL_GetTick();
+	}
+}
+
+void EXTI9_5_IRQHandler() {
+	int t = TIM1->CNT;
+
+	// PE9 - Steering Wheel
+	if (__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_9)) {
+		__HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_9);
+		UpdatePwm(&pwmSWS, GPIOE->IDR & GPIO_PIN_9, t);
+	}
+}
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

@@ -17,7 +17,7 @@
 
 /* USER CODE BEGIN Includes */
 #include <math.h>
-#include "pwm.c"
+#include "pwm.h"
 
 #include "can_ECUF.h"
 #include "can_eforce_init.h"
@@ -29,8 +29,6 @@
 /* Private variables ---------------------------------------------------------*/
 uint16_t photo;
 uint32_t adc[9], buffer[9];
-
-struct pwm timer;
 
 CanTxMsgTypeDef canTxMsg1;
 CanRxMsgTypeDef canRxMsg1;
@@ -58,6 +56,21 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 
 }
 
+// Init interrupt-based PWM input on GPIOE pin 9
+void InitPWMInput(void) {
+	GPIO_InitTypeDef GPIO_InitStruct;
+	GPIO_InitStruct.Pin = GPIO_PIN_9;
+	GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+	// Edge interrupt for PWM input
+	HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+	HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+}
+
+PwmInput pwmSWS;
 /* USER CODE END 0 */
 
 /**
@@ -110,7 +123,7 @@ int main(void)
 
   HAL_CAN_Receive_IT(&hcan1,CAN_FIFO0);
   HAL_TIM_PWM_Start (&htim3, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start_IT (&htim1, TIM_CHANNEL_1);
+  HAL_TIM_Base_Start(&htim1);
 
   setup();
 
@@ -127,6 +140,8 @@ int main(void)
   HAL_SPI_Transmit(&hspi1, &config_reg_write[1], 1, 60);
   HAL_GPIO_WritePin(CS_Pt1000_L_GPIO_Port,CS_Pt1000_L_Pin,GPIO_PIN_SET);
 
+  PwmInput_Init(&pwmSWS);
+  InitPWMInput();
   /* USER CODE END 2 */
 
   /* Infinite loop */

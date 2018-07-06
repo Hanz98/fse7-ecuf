@@ -1,59 +1,47 @@
-#include "pwmRead.h"
+#include "calibration.h"
+#include "can_ECUF.h"
+#include "pwm.h"
 
-//extern TIM_HandleTypeDef htim1;
+// FIXME: handle errors
 
-uint32_t PWM_Period;
-uint32_t STRW_Sensor_Reading;
-uint32_t STW_last_interrupt;
+extern PwmInput pwmSWS;
 
-void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
-{
-    if (htim->Instance==TIM1)
-        {
-            if(HAL_GPIO_ReadPin(SWS_SIG_IN_GPIO_Port,SWS_SIG_IN_Pin)){
-                PWM_Period=__HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_1);
-                __HAL_TIM_SET_COUNTER(&htim1, 0);
-            }
-            else{
-            	STRW_Sensor_Reading=__HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_1);
-            	STW_last_interrupt=HAL_GetTick();
-            }
+static uint16_t Get_Raw_Angle() {
+	uint16_t raw;
+	PwmInput_Get(&pwmSWS, &raw);
 
-        }
+	return (360 * DEGREE * raw / 0xffff);
 }
 
-uint16_t Get_STRW_Raw_Angle() {
-    return (360 * DEGREE * STRW_Sensor_Reading / PWM_Period);
-}
-int Get_STRW_Calibrated_Angle(){
-    int angle;
-    angle = (Get_STRW_Raw_Angle() - Calibration.Center);
+int Get_Steering_Angle(){
+	int angle;
 
-    if (angle < -128 * DEGREE)
-        angle = -128 * DEGREE;
-    else if (angle > 127 * DEGREE)
-        angle = 127 * DEGREE;
-    return angle;
-}
-static uint32_t Flash_Address = 0x080E0000;
+	// TODO: check direction!
+	angle = (Get_Raw_Angle() - Calibration.Center);
 
-void SaveCalibration(){
-	Flash_ErasePage(Flash_Address);
-	Flash_Write((uint8_t*)Flash_Address,&Calibration,sizeof(Calibration));
+	if (angle < -128 * DEGREE)
+		angle = -128 * DEGREE;
+	else if (angle > 127 * DEGREE)
+		angle = 127 * DEGREE;
+
+	//angle=ApplyCalibration(Get_PWM_Duty_Cycle(),4096,Calibration.Left,Calibration.Center,Calibration.Right);
+
+	return angle;
 }
 
-void calib(){
+void calib(ECUF_REQCalibSTW_t* reqCalib){
 
-	if(calibration.which == ECUF_CAL_STWIndex_STWLeft) {
-		Calibration.Left = Get_STRW_Calibrated_angle();
+	if(reqCalib->which == ECUF_CAL_STWIndex_STWLeft) {
+		//PwmInput_Get(&pwmSWS, &Calibration.Left);
 	}
 
-	if(calibration.which == ECUF_CAL_STWIndex_STWRight) {
-		Calibration.Right = Get_STRW_Calibrated_angle();
+	if(reqCalib->which == ECUF_CAL_STWIndex_STWRight) {
+		//PwmInput_Get(&pwmSWS, &Calibration.Right);
 	}
 
-	if(calibration.which == ECUF_CAL_STWIndex_STWCenter) {
-		Calibration.Center = Get_STRW_Calibrated_angle();
+	if(reqCalib->which == ECUF_CAL_STWIndex_STWCenter) {
+		//PwmInput_Get(&pwmSWS, &Calibration.Center);
+		Calibration.Center = Get_Raw_Angle();
 	}
 	SaveCalibration();
 }

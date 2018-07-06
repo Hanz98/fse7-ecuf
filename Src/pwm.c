@@ -1,22 +1,31 @@
-#include <stdint.h>
+#include "pwm.h"
+
 #include <stm32f1xx_hal.h>
 
+enum {
+	kTimeout = 20,
+};
 
-typedef struct pwm {
-	uint16_t start;
-	uint16_t time;
-	uint32_t validAt;
-} pwm ;
-/*
-void initPWM(struct pwm* pwm){
-	pwm->start = 0;
-	pwm->time = 0;
-	pwm->validAt = 0;
+void PwmInput_Init(PwmInput* p) {
+	p->start = 0;
+	p->time = 0;
+	p->validAt = 0;
 }
 
-void get(struct pwm* pwm, uint16_t* outputValue){
-	if (pwm->validAt + 20 > HAL_GetTick())
-		return;
-	*outputValue = (pwm->time - 8) * 2;
+int PwmInput_Get(PwmInput* p, uint16_t* value_out) {
+	if (HAL_GetTick() > p->validAt + kTimeout)
+		return 0;
+
+	// "This should never happen"
+	if (p->time < 8)
+		return 0;
+
+	// 1 us = 8 timer cycles
+	// min. period is    1 us (reading =    0)
+	// max. period is 4096 us (reading = 4095)
+
+	// Therefore, time <8, 32768 + 8) maps to output <0; 65535>
+
+	*value_out = (p->time - 8) * 2;
+	return 1;
 }
-*/

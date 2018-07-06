@@ -25,7 +25,7 @@ ECUF_DISSusp_t disSup;
 ECUF_Dashboard_t dashBoard;
 ECUF_TEMPSuspF_t temp;
 
-ECUF_REQCalibSTW_t calibration;
+//ECUF_REQCalibSTW_t calibration;
 
 ECUA_Status_t statusA;
 ECUB_Status_t statusBack;
@@ -54,6 +54,8 @@ void setup(){
 	HAL_GPIO_WritePin(ECUS_DTLG_FRST_GPIO_Port, ECUS_DTLG_FRST_Pin,GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(ECUP_FAN_FRST_GPIO_Port, ECUP_FAN_FRST_Pin,GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(DASH_ECUG_FRST_GPIO_Port, DASH_ECUG_FRST_Pin,GPIO_PIN_RESET);
+
+	LoadCalibration();
 
 	// starting sequence of dashboard
 	dashInit();
