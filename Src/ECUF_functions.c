@@ -78,14 +78,18 @@ void checkDash(ECUF_Dashboard_t* data){
 }
 
 void checkShutdown(ECUF_Status_t* data){
+	// Physical order: FWIL, intertia, SDBC
+
 	if (HAL_GPIO_ReadPin(SDBC_GPIO_Port,SDBC_Pin) == BREAK)
 		data->SDC_SDBC = 1;
 	else
 		data->SDC_SDBC = 0;
+
 	if (HAL_GPIO_ReadPin(INERTIA_GPIO_Port,INERTIA_Pin) == BREAK)
 		data->SDC_Inertia = 1;
 	else
 		data->SDC_Inertia = 0;
+
 	if (HAL_GPIO_ReadPin(CIS_GPIO_Port,CIS_Pin == BREAK))
 		data->SDC_FWIL = 1;
 	else
@@ -272,7 +276,7 @@ void indicatorControl(){
 		dataRed[0] &= RE_TRACTION;
 	}
 
-	if (statusP.APPS_Plausible){
+	if (!statusP.BPPC_Latch){
 		dataGreen[0] |= IMPLAUSILITY;
 		dataRed[0] |= IMPLAUSILITY;
 	}
@@ -319,9 +323,9 @@ void dashControl(){
 	barControl();
 	indicatorControl();
 	HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
-	if (tmp - state  < 0)
+	/*if (tmp - state  < 0)
 		HAL_SPI_Transmit(&hspi2, (uint8_t*)dataRed, 4, 5);
-	else
+	else*/
 		HAL_SPI_Transmit(&hspi2, (uint8_t*)dataGreen, 4, 5);
 
 	HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
@@ -339,9 +343,9 @@ void Send_STRW_Angle(){
 
 		if (!HAL_GPIO_ReadPin(SWS_ERR_IN_GPIO_Port,SWS_ERR_IN_Pin)){
 			// error: PWM timed out - sensor disconnected?
-			ECUF_send_STW(angle / DEGREE, 0, 0, 0);
+			ECUF_send_STW(angle * 10 / DEGREE, 0, 0, 0);
 		}else{
-			ECUF_send_STW(angle / DEGREE, 0, 1, 0);
+			ECUF_send_STW(angle * 10 / DEGREE, 0, 1, 0);
 		}
 	}
 }
