@@ -131,6 +131,7 @@ void dashInit(void){
 	}
 
 	dataGreen[0] |= TEMP_ER | RTD;
+	dataRed[0] |= TEMP_ER | RTD;
 	dashUpdate((uint8_t *)dataGreen, (uint8_t *)dataRed);
 	HAL_Delay(100);
 
@@ -146,6 +147,9 @@ void dashInit(void){
 	dataRed[0] = 0x0000;
 	soc = 0;
 	dashUpdate((uint8_t *)dataGreen, (uint8_t *)dataRed);
+
+	HAL_Delay(400);
+	tmpPhoto = 0;
 }
 
 /*
@@ -190,10 +194,10 @@ void blinkLED(uint16_t *dataGreen, uint16_t *dataRed, int mask, int period)
 
 void indicatorControl(){
 
-	statusBack.CarState = 1;
+	/*statusBack.CarState = 1;
 	statusVdcu.YC_ACT = 1;
 	statusP.BPPC_Latch = 1;
-	statusVdcu.TC_ACT = 1;
+	statusVdcu.TC_ACT = 1;*/
 
 	// eForce LOGO is shinning only until TS ON is pressed
 	if (statusBack.CarState < 2 ){
@@ -305,8 +309,8 @@ void dashUpdate(uint8_t *dataGreen, uint8_t *dataRed)
 		//HAL_SPI_Transmit(&hspi2, dataRed, 4, 5);
 		HAL_SPI_Transmit(&hspi2, dataGreen, 4, 5);
 	else
-		//HAL_SPI_Transmit(&hspi2, dataGreen, 4, 5);
-		HAL_SPI_Transmit(&hspi2, dataRed, 4, 5);
+		HAL_SPI_Transmit(&hspi2, dataGreen, 4, 5);
+	//	HAL_SPI_Transmit(&hspi2, dataRed, 4, 5);
 
 	HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
 }
@@ -484,11 +488,11 @@ void brakeTemp(){
 void dashBright(void){
 
 
-	//tmpPhoto = tmpPhoto - (0.25 * (tmpPhoto - photo));
+	tmpPhoto = tmpPhoto - (0.25 * (tmpPhoto - photo));
 
-	float alfa = 0.15;
+	float alfa = 0.1;
 
-	tmpPhoto =  alfa * photo + (1.0-alfa) * tmpPhoto; //Lowpass filter
+	//tmpPhoto =  alfa * photo + (1.0-alfa) * tmpPhoto; //Lowpass filter
 	dashBoard.AmbientLight = tmpPhoto;
 
 	value = tmpPhoto;
