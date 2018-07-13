@@ -1,6 +1,6 @@
-#include "can_ECUF.h"
-#include "main.h"
 #include "stm32f1xx_hal.h"
+#include "main.h"
+#include "can_ECUF.h"
 #include "calibration.h"
 #include "pwm.h"
 
@@ -25,11 +25,10 @@ uint16_t brakeTempL[2];
 uint16_t brakeTempR[2];
 uint16_t state = 0;
 uint16_t soc = 0;
-uint16_t lastsoc = 10;
 uint16_t fanPer;
 
 uint8_t shift = 0;
-uint8_t tmp = 0;
+uint16_t led_duty = 0;
 uint8_t i = 0;
 
 extern uint32_t adc[9];
@@ -90,7 +89,7 @@ void checkShutdown(ECUF_Status_t* data){
 	else
 		data->SDC_Inertia = 0;
 
-	if (HAL_GPIO_ReadPin(CIS_GPIO_Port,CIS_Pin == BREAK))
+	if (HAL_GPIO_ReadPin(CIS_GPIO_Port,CIS_Pin) == BREAK)
 		data->SDC_FWIL = 1;
 	else
 		data->SDC_FWIL = 0;
@@ -99,137 +98,111 @@ void checkShutdown(ECUF_Status_t* data){
 }
 void dashInit(void){
 
-		HAL_Delay(100);
-		dataGreen[0] += STABILIZATION;
-		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
-			HAL_SPI_Transmit(&hspi2, (uint8_t*)dataGreen, 4, 5);
-		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
+	int current_tick = 0;
 
-		HAL_Delay(100);
-		dataGreen[0] += TRACTION;
-		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
-		HAL_SPI_Transmit(&hspi2, (uint8_t*)dataGreen, 4, 5);
-		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
+	dataGreen[0] |= STABILIZATION;
+	dashUpdate((uint8_t *)dataGreen, (uint8_t *)dataRed);
+	HAL_Delay(100);
 
-		HAL_Delay(100);
-		dataGreen[0] += IMPLAUSILITY;
-		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
-			HAL_SPI_Transmit(&hspi2, (uint8_t*)dataGreen, 4, 5);
-		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
+	dataGreen[0] |= TRACTION;
+	dashUpdate((uint8_t *)dataGreen, (uint8_t *)dataRed);
+	HAL_Delay(100);
 
-		HAL_Delay(100);
-		dataGreen[0] += EFORCE;
-		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
-			HAL_SPI_Transmit(&hspi2, (uint8_t*)dataGreen, 4, 5);
-		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
+	dataGreen[0] |= IMPLAUSIBILITY;
+	dashUpdate((uint8_t *)dataGreen, (uint8_t *)dataRed);
+	HAL_Delay(300);
 
-		HAL_Delay(100);
-		dataGreen[0] += TEMP_ER;
-		dataGreen[0] += RTD;
-		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
-			HAL_SPI_Transmit(&hspi2, (uint8_t*)dataGreen, 4, 5);
-		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
+	//HAL_Delay(200);
 
-		HAL_Delay(100);
-		dataRed[0] += LW_ER;
-		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
-			HAL_SPI_Transmit(&hspi2, (uint8_t*)dataGreen, 4, 5);
-		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
-
-
-		HAL_Delay(100);
-		dataGreen[0] += CAN_ER;
-		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
-			HAL_SPI_Transmit(&hspi2, (uint8_t*)dataGreen, 4, 5);
-		HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
-
-
-	while(soc != 100){
-
-	if (timer < HAL_GetTick()){
-			timer = HAL_GetTick() + 10;
+	while(soc<=100)
+	{
+		if(current_tick + 15 < HAL_GetTick())
+		{
+			current_tick = HAL_GetTick();
+			if(soc > 62)
+			{
+				dataGreen[0] |= EFORCE;
+				dataRed[0] |= EFORCE;
+			}
 			soc++;
-	}
-
-	if (soc != lastsoc){
-		led = RED;
-		lastsoc = soc;
-		soc = (soc * 2) / 2;
-	shift = (100 - soc)/ 4;
-
-
-	for (int16_t i = 3; i > 0 ; i--){
-		led = RED;
-		dataRed[i] = led >> (16 * ((i - 4) * -1 ) + shift*2);
-		led = GREEN;
-		dataGreen[i] = (led) >> (16 * ((i - 4) * -1 ) + shift*2);
 		}
+		barControl(soc);
+		dashUpdate((uint8_t *)dataGreen, (uint8_t *)dataRed);
 	}
 
-		tmp = ((soc*soc)/10000.0)*100;
-		state += 1;
-		state %= 100;
+	dataGreen[0] |= TEMP_ER | RTD;
+	dashUpdate((uint8_t *)dataGreen, (uint8_t *)dataRed);
+	HAL_Delay(100);
 
-	HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
+	dataGreen[0] |= LW_ER;
+	dashUpdate((uint8_t *)dataGreen, (uint8_t *)dataRed);
+	HAL_Delay(100);
 
-	if (tmp - state  < 0)
-		HAL_SPI_Transmit(&hspi2, (uint8_t*)dataRed, 4, 5);
-	else
-		HAL_SPI_Transmit(&hspi2, (uint8_t*)dataGreen, 4, 5);
+	dataGreen[0] |= CAN_ER;
+	dashUpdate((uint8_t *)dataGreen, (uint8_t *)dataRed);
+	HAL_Delay(100);
 
-	HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
-}
-
-	while(soc != 0){
-	if (timer < HAL_GetTick()){
-			timer = HAL_GetTick() + 10;
-
-			soc--;
-
-	}
-
-	if (soc != lastsoc){
-		led = RED;
-		lastsoc = soc;
-	shift = (100 - soc)/ 4;
-
-
-	for (int16_t i = 3; i > 0 ; i--){
-		led = RED;
-		dataRed[i] = led >> (16 * ((i - 4) * -1 ) + shift*2);
-		led = GREEN;
-		dataGreen[i] = (led) >> (16 * ((i - 4) * -1 ) + shift*2);
-		}
-	}
-
-		tmp = ((soc*soc)/10000.0)*100;
-		state += 1;
-		state %= 100;
-
-	HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
-
-	if (tmp - state  < 0)
-		HAL_SPI_Transmit(&hspi2, (uint8_t*)dataRed, 4, 5);
-	else
-		HAL_SPI_Transmit(&hspi2, (uint8_t*)dataGreen, 4, 5);
-
-	HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
-
-	}
 	dataGreen[0] = 0x0000;
 	dataRed[0] = 0x0000;
-	soc = 50;
+	soc = 0;
+	dashUpdate((uint8_t *)dataGreen, (uint8_t *)dataRed);
+}
+
+/*
+ * Blinks LEDs defined by MASK using defined period
+ *
+ * dataGreen - array for green LEDs
+ * dataRed - array for red LEDs
+ * mask - masking for the LEDs
+ * period - period in ms
+ */
+void blinkLED(uint16_t *dataGreen, uint16_t *dataRed, int mask, int period)
+{
+	static int state;
+
+	static int last_tick;
+	int current_tick =  HAL_GetTick();
+
+	//Looking for period
+	if(current_tick > last_tick+period)
+	{
+		// Toggling
+		if(state)
+		{
+			state = 0;
+			dataGreen[0] |= mask;
+		    dataGreen[0] |= mask;
+		    dataRed[0] |= mask;
+		    dataRed[0] |= mask;
+		}
+		else
+		{
+			state = 1;
+			dataGreen[0] &= ~mask;
+		    dataGreen[0] &= ~mask;
+		    dataRed[0] &= ~mask;
+		    dataRed[0] &= ~mask;
+		}
+
+		last_tick = current_tick;
+	}
 }
 
 void indicatorControl(){
 
+	statusBack.CarState = 1;
+	statusVdcu.YC_ACT = 1;
+	statusP.BPPC_Latch = 1;
+	statusVdcu.TC_ACT = 1;
+
+	// eForce LOGO is shinning only until TS ON is pressed
 	if (statusBack.CarState < 2 ){
 		dataGreen[0] |= EFORCE;
 		dataRed[0] |= EFORCE;
 	}
 	else {
-		dataGreen[0] &= RE_EFORCE;
-		dataRed[0] &= RE_EFORCE;
+		dataGreen[0] &= ~EFORCE;
+		dataRed[0] &= ~EFORCE;
 	}
 	/*
 	 *if (statusBack.CarState < 2 ){
@@ -259,30 +232,38 @@ void indicatorControl(){
 		dataRed[0] &= RE_TEMP_ER;
 	}
 */
-	if (!statusVdcu.YC_ENABLED ){
-		dataGreen[0] |= STABILIZATION;
-		dataRed[0] |= STABILIZATION;
+	if (statusVdcu.YC_ENABLED ){
+		if(statusVdcu.YC_ACT){ // Blink
+			blinkLED(dataGreen, dataRed, STABILIZATION, 75);
+		} else {
+			dataGreen[0] &= ~STABILIZATION;
+			dataRed[0] &= ~STABILIZATION;
+		}
 	}
 	else {
-		dataGreen[0] &= RE_STABILIZATION;
-		dataRed[0] &= RE_STABILIZATION;
-	}
-	if (!statusVdcu.TC_ENABLED){
-		dataGreen[0] &= TRACTION;
-		dataRed[0] &= TRACTION;
-	}
-	else {
-		dataGreen[0] &= RE_TRACTION;
-		dataRed[0] &= RE_TRACTION;
+		dataGreen[0] |= STABILIZATION; // Shine
+		dataRed[0] |= STABILIZATION; // Shine
 	}
 
-	if (!statusP.BPPC_Latch){
-		dataGreen[0] |= IMPLAUSILITY;
-		dataRed[0] |= IMPLAUSILITY;
+	if (statusVdcu.TC_ENABLED){
+		if(statusVdcu.TC_ACT) { //  Blink
+			blinkLED(dataGreen, dataRed, TRACTION, 75);
+		} else {
+			dataGreen[0] &= ~TRACTION;
+			dataRed[0] &= ~TRACTION;
+		}
 	}
 	else {
-		dataGreen[0] &= RE_IMPLAUSILITY;
-		dataRed[0] &= RE_IMPLAUSILITY;
+		dataGreen[0] |= TRACTION; // shine
+		dataRed[0] |= TRACTION; // shine
+	}
+
+	if (statusP.BPPC_Latch){
+		blinkLED(dataGreen, dataRed, IMPLAUSIBILITY, 125);
+	}
+	else {
+		dataGreen[0] &= ~IMPLAUSIBILITY;
+		dataRed[0] &= ~IMPLAUSIBILITY;
 	}
 
 	if (statusVdcu.State == 1){
@@ -290,63 +271,106 @@ void indicatorControl(){
 		dataRed[0] |= RTD;
 	}
 	else {
-		dataGreen[0] &= RE_RTD;
-		dataRed[0] &= RE_RTD;
+		dataGreen[0] &= ~RTD;
+		dataRed[0] &= ~RTD;
 	}
 }
 
-void barControl(){
-	soc = estimationA.SOC/2;
+void barControl(uint16_t soc){
 
+	static uint16_t lastsoc;
 
-	if (soc != lastsoc){
-		led = RED;
+	if (soc != lastsoc) { // If SOC is changed
 		lastsoc = soc;
-	shift = (100 - soc)/ 4;
+		shift = (100 - soc) * 24 / 100;
 
 
-	for (int16_t i = 3; i > 0 ; i--){
-		led = RED;
-		dataRed[i] = led >> (16 * ((i - 4) * -1 ) + shift*2);
-		led = GREEN;
-		dataGreen[i] = (led) >> (16 * ((i - 4) * -1 ) + shift*2);
+		for (int16_t i = 3; i > 0 ; i--) {
+			dataRed[i] = RED >> (16 * ((i - 4) * -1 ) + shift*2);
+			dataGreen[i] = GREEN >> (16 * ((i - 4) * -1 ) + shift*2);
 		}
 	}
 
-		tmp = ((soc*soc)/10000.0)*100;
-		state += 1;
-		state %= 100;
-
+	// Responsible for LED BAR GRAPH color (bad way of doing PWM)
+	led_duty = ((soc*soc)/100.0);
+	//led_duty = soc;
+	state++;
+	state %= 100;
 }
 
-void dashControl(){
-	barControl();
-	indicatorControl();
+void dashUpdate(uint8_t *dataGreen, uint8_t *dataRed)
+{
 	HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_RESET);
-	/*if (tmp - state  < 0)
-		HAL_SPI_Transmit(&hspi2, (uint8_t*)dataRed, 4, 5);
-	else*/
-		HAL_SPI_Transmit(&hspi2, (uint8_t*)dataGreen, 4, 5);
+	if (state > led_duty)
+		//HAL_SPI_Transmit(&hspi2, dataRed, 4, 5);
+		HAL_SPI_Transmit(&hspi2, dataGreen, 4, 5);
+	else
+		//HAL_SPI_Transmit(&hspi2, dataGreen, 4, 5);
+		HAL_SPI_Transmit(&hspi2, dataRed, 4, 5);
 
 	HAL_GPIO_WritePin(DASH_STROBE_GPIO_Port, DASH_STROBE_Pin, GPIO_PIN_SET);
+}
 
-
-
+void dashHandle(){
+	barControl(estimationA.SOC);
+	indicatorControl();
+	dashUpdate((uint8_t *)dataGreen, (uint8_t *)dataRed);
 
 }
 
 void Send_STRW_Angle(){
-	int current_tick = HAL_GetTick();
+	//int current_tick = HAL_GetTick();
+	int angle_FT;
+	int angle;
+
+	static uint8_t seq;
+
+	static int last_angle;
+	//static int last_tick;
+	static int last_angular_speed;
 
 	if(ECUF_STW_need_to_send()){
-		int angle = Get_Steering_Angle();
 
-		if (!HAL_GPIO_ReadPin(SWS_ERR_IN_GPIO_Port,SWS_ERR_IN_Pin)){
-			// error: PWM timed out - sensor disconnected?
-			ECUF_send_STW(angle * 10 / DEGREE, 0, 0, 0);
-		}else{
-			ECUF_send_STW(angle * 10 / DEGREE, 0, 1, 0);
+		if(!Get_Steering_Angle(&angle)) {
+			angle = 0;
+			angle_FT = 1;
 		}
+
+		int angular_speed;
+
+		//int time_diff = current_tick - last_tick; //ms  Hal TICK timer is too slow for this use
+		int time_diff = 10; // ms Time diff between can messages should be 10ms
+
+		// NEED TO USE TIMER WITH FREQUENCY ATLEAST 100kHZ
+
+		if(time_diff == 0) // Hotfix for zero division
+		{
+			angular_speed = 0;
+		}
+		else if(time_diff < 0 || time_diff > 100) // Dummy hotfix for overflow
+		{
+			angular_speed = last_angular_speed;
+		}
+		else // Differentiation
+		{
+			angular_speed = ((angle - last_angle) * 1000) / time_diff;
+		}
+
+		// Save history
+		last_angle = angle;
+		last_angular_speed = angular_speed;
+		//last_tick = current_tick;
+
+		// If there is overrange an FT bit is raised but steering angle is still sent
+		if (HAL_GPIO_ReadPin(SWS_ERR_IN_GPIO_Port, SWS_ERR_IN_Pin)){
+			ECUF_send_STW((angle * 10) / DEGREE, (angular_speed * 10) / DEGREE, angle_FT, seq);
+		}else{
+			angle_FT = 1;
+			// error: PWM timed out - sensor disconnected or out of range?
+			ECUF_send_STW(0, 0, angle_FT, seq);
+		}
+
+		if(++seq > 15) seq = 0;
 	}
 }
 
@@ -413,7 +437,7 @@ void suspensionDis(){
 	disSup.RR = rescale(adc[7], 193, 3588, 0, 75) * 0.01;
 	disSup.RL = rescale(adc[8], 192, 3554, 0, 75) * 0.01;
 }
-void breakTemp(){
+void brakeTemp(){
 	uint16_t temperature = 0 ;
 
 	if (!HAL_GPIO_ReadPin(DRDY_Pt1000_R_GPIO_Port,DRDY_Pt1000_R_Pin)){
@@ -460,7 +484,11 @@ void breakTemp(){
 void dashBright(void){
 
 
-	tmpPhoto = tmpPhoto - (0.25 * (tmpPhoto - photo));
+	//tmpPhoto = tmpPhoto - (0.25 * (tmpPhoto - photo));
+
+	float alfa = 0.15;
+
+	tmpPhoto =  alfa * photo + (1.0-alfa) * tmpPhoto; //Lowpass filter
 	dashBoard.AmbientLight = tmpPhoto;
 
 	value = tmpPhoto;

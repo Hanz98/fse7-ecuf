@@ -1,6 +1,5 @@
-#include "pwm.h"
-
 #include <stm32f1xx_hal.h>
+#include "pwm.h"
 
 enum {
 	kTimeout = 20,
@@ -26,6 +25,6 @@ int PwmInput_Get(PwmInput* p, uint16_t* value_out) {
 
 	// Therefore, time <8, 32768 + 8) maps to output <0; 65535>
 
-	*value_out = (p->time - 8) * 2;
+	*value_out = (p->time - 8) * 2; // 2 = 65535/4096/8
 	return 1;
 }

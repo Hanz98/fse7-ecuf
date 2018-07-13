@@ -1,5 +1,5 @@
-#include "main.h"
 #include "stm32f1xx_hal.h"
+#include "main.h"
 #include <math.h>
 
 #include "can_ECUF.h"
@@ -33,7 +33,7 @@ VDCU_Status_t statusVdcu;
 ECUP_Status_t statusP;
 ECUA_Estimation_t estimationA;
 
-void setup(){
+void setup() {
 	// setting up reading channels
 	HAL_GPIO_WritePin(SEL_0_GPIO_Port,SEL_0_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(SEL_1_GPIO_Port,SEL_1_Pin, GPIO_PIN_RESET);
@@ -106,11 +106,10 @@ void loop(){
 	}
 	*/
 	receiveData();
-	checkDash(&dashBoard);
+	checkDash(&dashBoard); // Handle dash inputs
 	checkShutdown(&statusFront);
-	dashControl();
-	sendData();
-	dashBright();
-	breakTemp();
+	dashHandle();
+	brakeTemp();
 	fanCheck();
+	sendData();
 }

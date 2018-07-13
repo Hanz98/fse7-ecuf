@@ -1,5 +1,5 @@
-
-
+#ifndef __ECUF_FUNCTIONS_H__
+#define __ECUF_FUNCTIONS_H__
 
 void checkDash(ECUF_Dashboard_t* data);
 void checkShutdown(ECUF_Status_t* data);
@@ -15,3 +15,5 @@ void dashBright(void);
 void breakTemp(void);
 void suspensionDis(void);
 int32_t rescale(int32_t value, float oldMin, float oldMax, float newMin, float newMax);
+
+#endif

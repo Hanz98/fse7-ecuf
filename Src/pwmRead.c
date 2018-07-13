@@ -13,20 +13,16 @@ static uint16_t Get_Raw_Angle() {
 	return (360 * DEGREE * raw / 0xffff);
 }
 
-int Get_Steering_Angle(){
-	int angle;
+int Get_Steering_Angle(int *angle){
 
 	// TODO: check direction!
-	angle = (Get_Raw_Angle() - Calibration.Center);
+	*angle = (Get_Raw_Angle() - Calibration.Center);
 
-	if (angle < -128 * DEGREE)
-		angle = -128 * DEGREE;
-	else if (angle > 127 * DEGREE)
-		angle = 127 * DEGREE;
-
+	if (abs(*angle) > 110 * DEGREE) // Check overrange maximum possible steering wheel angle is 110 Deg
+		return 0;
 	//angle=ApplyCalibration(Get_PWM_Duty_Cycle(),4096,Calibration.Left,Calibration.Center,Calibration.Right);
 
-	return angle;
+	return 1;
 }
 
 void calib(ECUF_REQCalibSTW_t* reqCalib){
@@ -48,7 +44,7 @@ void calib(ECUF_REQCalibSTW_t* reqCalib){
 
 /*
  *
- *		FILTRACE - NEVÍM S NÍ MOC RADY
+ *		filter
  *
 void MedianInit(MEDIAN_TypeDef* median){
 
