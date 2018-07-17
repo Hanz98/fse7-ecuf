@@ -10,6 +10,7 @@ struct STW_Calibration {
 	uint16_t Left;
 	uint16_t Center;
 	uint16_t Right;
+	int CenterOffset;
 };
 
 extern struct STW_Calibration Calibration;

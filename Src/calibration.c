@@ -10,7 +10,7 @@ struct STW_Calibration Calibration;
 static uint32_t Flash_Address = 0x0803F800;
 
 void SaveCalibration(){
-	Flash_ErasePage(FLASH_BANK_1, (uint8_t*) Flash_Address);
+ 	Flash_ErasePage(FLASH_BANK_1, (uint8_t*) Flash_Address);
 	Flash_Write((uint8_t*)Flash_Address,&Calibration,sizeof(Calibration));
 }
 

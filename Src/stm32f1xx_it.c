@@ -467,10 +467,20 @@ extern PwmInput pwmSWS;
 
 inline void UpdatePwm(PwmInput* pwm, int input, uint32_t time) {
 	if (input) {
+		if (pwm->start > time ){
+			pwm->period = ( time + 0xffff ) - pwm->start;
+		}
+		else{
+			pwm->period = time - pwm->start;
+		}
 		pwm->start = time;
 	}
 	else {
-		pwm->time = (time - pwm->start) & 0xffff;
+		if (pwm->period == 0)
+			pwm->duty = 0;
+		else
+			pwm->duty = (int)((time - pwm->start) & 0xffff) * 0x7fff /pwm->period;
+			// 0x7FFF je maximalni hodnota duty  4096us * 72MHz/9scale
 		pwm->validAt = HAL_GetTick();
 	}
 }

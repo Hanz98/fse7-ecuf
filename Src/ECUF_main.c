@@ -7,8 +7,8 @@
 #include "ECUF_functions.h"
 
 
-extern uint16_t soc;
-extern uint64_t timer;
+// extern uint16_t soc;
+// extern uint64_t timer;
 
 uint16_t counter = 100;
 uint16_t counter1 = 0;
@@ -33,8 +33,11 @@ VDCU_Status_t statusVdcu;
 ECUP_Status_t statusP;
 ECUA_Estimation_t estimationA;
 
+
+
 void setup() {
 	// setting up reading channels
+	ledInit();
 	HAL_GPIO_WritePin(SEL_0_GPIO_Port,SEL_0_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(SEL_1_GPIO_Port,SEL_1_Pin, GPIO_PIN_RESET);
 

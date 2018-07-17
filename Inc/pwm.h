@@ -4,7 +4,8 @@
 #include <stdint.h>
 
 typedef struct {
-	uint16_t start, time;
+	int period;
+	uint16_t start, duty;
 	uint32_t validAt;
 } PwmInput;
 

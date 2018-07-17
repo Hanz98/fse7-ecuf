@@ -1,14 +1,20 @@
 #include "stm32f1xx_hal.h"
 #include "main.h"
 #include "can_ECUF.h"
+#include "ECUF_functions.h"
 #include "calibration.h"
 #include "pwm.h"
+#include "pwmRead.h"
 
 extern SPI_HandleTypeDef hspi1;
 extern SPI_HandleTypeDef hspi2;
 
-extern CAN_HandleTypeDef hcan1;
-extern CAN_HandleTypeDef hcan2;
+//extern CAN_HandleTypeDef hcan1;
+//extern CAN_HandleTypeDef hcan2;
+
+ledBlink_T bspdLed;
+ledBlink_T tractionLed;
+ledBlink_T stabilizationLed;
 
 int32_t value;
 int32_t valueControl = 0;
@@ -32,7 +38,6 @@ uint16_t led_duty = 0;
 uint8_t i = 0;
 
 extern uint32_t adc[9];
-extern int time1;
 extern enum photoState stateP;
 extern uint16_t photo;
 extern TIM_HandleTypeDef htim1;
@@ -49,6 +54,30 @@ extern ECUB_Status_t statusBack;
 extern VDCU_Status_t statusVdcu;
 extern ECUP_Status_t statusP;
 extern ECUA_Estimation_t estimationA;
+
+
+
+void bspdInit(ledBlink_T *led){
+		led->period = 125;
+		led->mask = IMPLAUSIBILITY;
+		led->currentTick = 0;
+		led->lastTick = 0;
+		led->state = 1;
+	}
+	void tractionInit(ledBlink_T *led){
+		led->period = 75;
+		led->mask = TRACTION;
+		led->currentTick = 0;
+		led->lastTick = 0;
+		led->state = 1;
+	}
+	void stabilizationInit(ledBlink_T *led){
+		led->period = 75;
+		led->mask = STABILIZATION;
+		led->currentTick = 0;
+		led->lastTick = 0;
+		led->state = 1;
+	}
 
 
 void checkDash(ECUF_Dashboard_t* data){
@@ -160,38 +189,40 @@ void dashInit(void){
  * mask - masking for the LEDs
  * period - period in ms
  */
-void blinkLED(uint16_t *dataGreen, uint16_t *dataRed, int mask, int period)
+void blinkLED(ledBlink_T *led,uint16_t *dataGreen, uint16_t *dataRed)
 {
-	static int state;
-
-	static int last_tick;
-	int current_tick =  HAL_GetTick();
+	led->currentTick =  HAL_GetTick();
 
 	//Looking for period
-	if(current_tick > last_tick+period)
+	if(led->currentTick > led->lastTick+led->period)
 	{
 		// Toggling
-		if(state)
+		if(led->state)
 		{
-			state = 0;
-			dataGreen[0] |= mask;
-		    dataGreen[0] |= mask;
-		    dataRed[0] |= mask;
-		    dataRed[0] |= mask;
+			led->state = 0;
+			dataGreen[0] |= led->mask;
+		    dataGreen[0] |= led->mask;
+		    dataRed[0] |= led->mask;
+		    dataRed[0] |= led->mask;
 		}
 		else
 		{
-			state = 1;
-			dataGreen[0] &= ~mask;
-		    dataGreen[0] &= ~mask;
-		    dataRed[0] &= ~mask;
-		    dataRed[0] &= ~mask;
+			led->state = 1;
+			dataGreen[0] &= ~led->mask;
+		    dataGreen[0] &= ~led->mask;
+		    dataRed[0] &= ~led->mask;
+		    dataRed[0] &= ~led->mask;
 		}
 
-		last_tick = current_tick;
+		led->lastTick = led->currentTick;
 	}
 }
 
+void ledInit(){
+	bspdInit(&bspdLed);
+	tractionInit(&tractionLed);
+	stabilizationInit(&stabilizationLed);
+}
 void indicatorControl(){
 
 	/*statusBack.CarState = 1;
@@ -238,7 +269,7 @@ void indicatorControl(){
 */
 	if (statusVdcu.YC_ENABLED ){
 		if(statusVdcu.YC_ACT){ // Blink
-			blinkLED(dataGreen, dataRed, STABILIZATION, 75);
+			blinkLED(&stabilizationLed, dataGreen, dataRed);
 		} else {
 			dataGreen[0] &= ~STABILIZATION;
 			dataRed[0] &= ~STABILIZATION;
@@ -251,7 +282,7 @@ void indicatorControl(){
 
 	if (statusVdcu.TC_ENABLED){
 		if(statusVdcu.TC_ACT) { //  Blink
-			blinkLED(dataGreen, dataRed, TRACTION, 75);
+			blinkLED(&tractionLed, dataGreen, dataRed);
 		} else {
 			dataGreen[0] &= ~TRACTION;
 			dataRed[0] &= ~TRACTION;
@@ -263,7 +294,7 @@ void indicatorControl(){
 	}
 
 	if (statusP.BPPC_Latch){
-		blinkLED(dataGreen, dataRed, IMPLAUSIBILITY, 125);
+		blinkLED(&bspdLed, dataGreen, dataRed);
 	}
 	else {
 		dataGreen[0] &= ~IMPLAUSIBILITY;
@@ -316,7 +347,7 @@ void dashUpdate(uint8_t *dataGreen, uint8_t *dataRed)
 }
 
 void dashHandle(){
-	barControl(estimationA.SOC);
+	barControl(estimationA.SOC / 2);
 	indicatorControl();
 	dashUpdate((uint8_t *)dataGreen, (uint8_t *)dataRed);
 
@@ -338,7 +369,8 @@ void Send_STRW_Angle(){
 		if(!Get_Steering_Angle(&angle)) {
 			angle = 0;
 			angle_FT = 1;
-		}
+		} else
+			angle_FT = 0;
 
 		int angular_speed;
 
@@ -357,21 +389,25 @@ void Send_STRW_Angle(){
 		}
 		else // Differentiation
 		{
-			angular_speed = ((angle - last_angle) * 1000) / time_diff;
+			angular_speed = ((angle - last_angle) * 100) / time_diff; // 100 je 1000 ms / 10 (prizpusobeni na can)
 		}
 
 		// Save history
 		last_angle = angle;
 		last_angular_speed = angular_speed;
 		//last_tick = current_tick;
-
+		//angle = (angle * 10) / DEGREE;
 		// If there is overrange an FT bit is raised but steering angle is still sent
 		if (HAL_GPIO_ReadPin(SWS_ERR_IN_GPIO_Port, SWS_ERR_IN_Pin)){
-			ECUF_send_STW((angle * 10) / DEGREE, (angular_speed * 10) / DEGREE, angle_FT, seq);
-		}else{
-			angle_FT = 1;
+			ECUF_send_STW(angle, (angular_speed), angle_FT, seq);
+			angle_FT = 0;
+
+		}else
+		{
 			// error: PWM timed out - sensor disconnected or out of range?
+			angle_FT = 1;
 			ECUF_send_STW(0, 0, angle_FT, seq);
+
 		}
 
 		if(++seq > 15) seq = 0;
@@ -490,7 +526,7 @@ void dashBright(void){
 
 	tmpPhoto = tmpPhoto - (0.25 * (tmpPhoto - photo));
 
-	float alfa = 0.1;
+	//float alfa = 0.1;
 
 	//tmpPhoto =  alfa * photo + (1.0-alfa) * tmpPhoto; //Lowpass filter
 	dashBoard.AmbientLight = tmpPhoto;

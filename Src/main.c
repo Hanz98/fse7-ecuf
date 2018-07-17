@@ -79,6 +79,7 @@ PwmInput pwmSWS;
   * @retval None
   */
 int main(void)
+
 {
   /* USER CODE BEGIN 1 */
 	uint8_t config_reg_write[] = {0X00 | 0X80, 0xC2};
@@ -126,6 +127,11 @@ int main(void)
   HAL_TIM_Base_Start(&htim1);
 
   setup();
+/*
+  ECUF_REQCalibSTW_t reqCalib1;
+  reqCalib1.which=ECUF_CAL_STWIndex_STWCenter;
+  calib(&reqCalib1);
+*/
 
   HAL_GPIO_WritePin(CS_Pt1000_R_GPIO_Port,CS_Pt1000_R_Pin,GPIO_PIN_RESET);
   HAL_Delay(10);

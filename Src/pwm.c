@@ -7,8 +7,9 @@ enum {
 
 void PwmInput_Init(PwmInput* p) {
 	p->start = 0;
-	p->time = 0;
+	p->duty = 0;
 	p->validAt = 0;
+	p->period = 0;
 }
 
 int PwmInput_Get(PwmInput* p, uint16_t* value_out) {
@@ -16,15 +17,17 @@ int PwmInput_Get(PwmInput* p, uint16_t* value_out) {
 		return 0;
 
 	// "This should never happen"
-	if (p->time < 8)
+
+	if (p->duty < 8)
 		return 0;
 
 	// 1 us = 8 timer cycles
 	// min. period is    1 us (reading =    0)
-	// max. period is 4096 us (reading = 4095)
+	// max. period is 4096 us (reading = 32767)
 
 	// Therefore, time <8, 32768 + 8) maps to output <0; 65535>
 
-	*value_out = (p->time - 8) * 2; // 2 = 65535/4096/8
+	*value_out = (p->duty - 8) * 2; // 2 = 65535/4096/8TIM1
+
 	return 1;
 }
