@@ -15,6 +15,7 @@ extern SPI_HandleTypeDef hspi2;
 ledBlink_T bspdLed;
 ledBlink_T tractionLed;
 ledBlink_T stabilizationLed;
+ledBlinkGpio_T sdbcLed;
 
 int32_t value;
 int32_t valueControl = 0;
@@ -63,21 +64,29 @@ void bspdInit(ledBlink_T *led){
 		led->currentTick = 0;
 		led->lastTick = 0;
 		led->state = 1;
-	}
-	void tractionInit(ledBlink_T *led){
+}
+
+void tractionInit(ledBlink_T *led){
 		led->period = 75;
 		led->mask = TRACTION;
 		led->currentTick = 0;
 		led->lastTick = 0;
 		led->state = 1;
-	}
-	void stabilizationInit(ledBlink_T *led){
+}
+
+void stabilizationInit(ledBlink_T *led){
 		led->period = 75;
 		led->mask = STABILIZATION;
 		led->currentTick = 0;
 		led->lastTick = 0;
 		led->state = 1;
-	}
+}
+
+void sdbcLedInit(ledBlinkGpio_T *led){
+		led->period = 200;
+		led->currentTick = 0;
+		led->lastTick = 0;
+}
 
 
 void checkDash(ECUF_Dashboard_t* data){
@@ -108,22 +117,31 @@ void checkDash(ECUF_Dashboard_t* data){
 void checkShutdown(ECUF_Status_t* data){
 	// Physical order: FWIL, intertia, SDBC
 
-	if (HAL_GPIO_ReadPin(SDBC_GPIO_Port,SDBC_Pin) == BREAK)
-		data->SDC_SDBC = 1;
-	else
-		data->SDC_SDBC = 0;
-
-	if (HAL_GPIO_ReadPin(INERTIA_GPIO_Port,INERTIA_Pin) == BREAK)
+	if (HAL_GPIO_ReadPin(INERTIA_GPIO_Port,INERTIA_Pin) == SDC_CLOSED)
 		data->SDC_Inertia = 1;
 	else
 		data->SDC_Inertia = 0;
 
-	if (HAL_GPIO_ReadPin(CIS_GPIO_Port,CIS_Pin) == BREAK)
+	if (HAL_GPIO_ReadPin(CIS_GPIO_Port,CIS_Pin) == SDC_CLOSED)
 		data->SDC_FWIL = 1;
 	else
 		data->SDC_FWIL = 0;
 
+	if (HAL_GPIO_ReadPin(SDBC_GPIO_Port,SDBC_Pin) == SDC_CLOSED) {
+		data->SDC_SDBC = 1;
 
+		HAL_GPIO_WritePin(EN_LED_SDBC_GPIO_Port, EN_LED_SDBC_Pin, GPIO_PIN_RESET);
+	}
+	else {
+		data->SDC_SDBC = 0;
+
+		if(data->SDC_Inertia)
+		{
+			blinkLEDGpio(&sdbcLed, EN_LED_SDBC_GPIO_Port, EN_LED_SDBC_Pin);
+		} else {
+			HAL_GPIO_WritePin(EN_LED_SDBC_GPIO_Port, EN_LED_SDBC_Pin, GPIO_PIN_RESET);
+		}
+	}
 }
 void dashInit(void){
 
@@ -218,10 +236,27 @@ void blinkLED(ledBlink_T *led,uint16_t *dataGreen, uint16_t *dataRed)
 	}
 }
 
+void blinkLEDGpio(ledBlinkGpio_T *led, GPIO_TypeDef *port, uint16_t pin)
+{
+	led->currentTick =  HAL_GetTick();
+
+	//Looking for period
+	if(led->currentTick > led->lastTick+led->period)
+	{
+		// Toggling
+		//HAL_GPIO_TogglePin(SEL_0_GPIO_Port,SEL_0_Pin);
+		HAL_GPIO_TogglePin(port, pin);
+		led->lastTick = led->currentTick;
+	}
+}
+
+
+
 void ledInit(){
 	bspdInit(&bspdLed);
 	tractionInit(&tractionLed);
 	stabilizationInit(&stabilizationLed);
+	sdbcLedInit(&sdbcLed);
 }
 void indicatorControl(){
 
@@ -308,6 +343,12 @@ void indicatorControl(){
 	else {
 		dataGreen[0] &= ~RTD;
 		dataRed[0] &= ~RTD;
+	}
+
+	if (HAL_GetTick() > 5000 && ECUA_get_Status(&statusA) && !statusA.SDC_IMD)
+	{
+		//HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_SET); // Set IMD LED....old overwrite of IMD LED
+		HAL_GPIO_WritePin(IMD_overwrite_GPIO_Port,IMD_overwrite_Pin, GPIO_PIN_SET); //new overwrite of IMD LED
 	}
 }
 
@@ -398,6 +439,8 @@ void Send_STRW_Angle(){
 		//last_tick = current_tick;
 		//angle = (angle * 10) / DEGREE;
 		// If there is overrange an FT bit is raised but steering angle is still sent
+
+		angle_FT = 1;
 		if (HAL_GPIO_ReadPin(SWS_ERR_IN_GPIO_Port, SWS_ERR_IN_Pin)){
 			ECUF_send_STW(angle, (angular_speed), angle_FT, seq);
 			angle_FT = 0;

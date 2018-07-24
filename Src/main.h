@@ -91,7 +91,9 @@
 #define CS_Pt1000_L_GPIO_Port GPIOB
 #define DRDY_Pt1000_L_Pin GPIO_PIN_0
 #define DRDY_Pt1000_L_GPIO_Port GPIOE
-
+//new code for IMD overwrite
+#define IMD_overwrite_Pin GPIO_PIN_7
+#define IMD_overwrite_GPIO_Port GPIOC
 /* ########################## Assert Selection ############################## */
 /**
   * @brief Uncomment the line below to expanse the "assert_param" macro in the 

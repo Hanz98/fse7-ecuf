@@ -8,10 +8,16 @@ typedef struct {
 	int currentTick, lastTick, period;
 }ledBlink_T;
 
+typedef struct {
+	uint8_t state;
+	int currentTick, lastTick, period;
+}ledBlinkGpio_T;
+
 
 void bspdInit(ledBlink_T *led);
 void tractionInit(ledBlink_T *led);
 void stabilizationInit(ledBlink_T *led);
+void sdbcLedInit(ledBlinkGpio_T *led);
 
 
 

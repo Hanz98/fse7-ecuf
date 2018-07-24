@@ -191,21 +191,9 @@ void SysTick_Handler(void)
   static int timer1;
   timer1++;
   if (timer1 >= 500){
-	  timer1 = 0;
-	 HAL_GPIO_TogglePin(SEL_0_GPIO_Port,SEL_0_Pin);
-	 //HAL_GPIO_TogglePin(SEL_1_GPIO_Port,SEL_1_Pin);
-
-	  if (HAL_GPIO_ReadPin(SDBC_GPIO_Port, SDBC_Pin) != PRESS){
-		  HAL_GPIO_TogglePin(EN_LED_SDBC_GPIO_Port,EN_LED_SDBC_Pin);
-
+  	  timer1 = 0;
+  	 HAL_GPIO_TogglePin(SEL_0_GPIO_Port,SEL_0_Pin);
   }
-	  else {
-		  HAL_GPIO_WritePin(EN_LED_SDBC_GPIO_Port,EN_LED_SDBC_Pin,GPIO_PIN_RESET);
-
-	  }
-
-  }
-
   /* USER CODE END SysTick_IRQn 1 */
 }
 

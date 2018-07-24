@@ -92,6 +92,10 @@
 #define DRDY_Pt1000_L_Pin GPIO_PIN_0
 #define DRDY_Pt1000_L_GPIO_Port GPIOE
 
+//new code for IMD overwrite
+#define IMD_overwrite_Pin GPIO_PIN_7
+#define IMD_overwrite_GPIO_Port GPIOC
+
 /* ########################## Assert Selection ############################## */
 /**
   * @brief Uncomment the line below to expanse the "assert_param" macro in the 
@@ -123,6 +127,7 @@
 
 #define PRESS 0
 #define BREAK 0
+#define SDC_CLOSED 0
 #define LPF 0.25
 
 enum photoState {LONG = 1, SHORT = 0};
